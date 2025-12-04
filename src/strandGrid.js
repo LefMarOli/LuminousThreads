@@ -1,0 +1,46 @@
+class StrandGrid {
+  constructor(p5bezier, width, height, gapX, margin) {
+    this.p5bezier = p5bezier;
+
+    this.numStrands = floor((width + 4 * margin) / gapX);
+    this.strands = Array(this.numStrands);
+
+    const anchorY = height - margin;
+    this.numPoints = 11;
+    const gapY = ceil((anchorY - margin) / this.numPoints) + 1;
+    const dataPoints = Array(this.numPoints);
+    for (let y = 0; y < this.numPoints; y++) {
+      dataPoints[y] = Array(2);
+    }
+
+    for (let x = 0; x < this.numStrands; x++) {
+      const anchorX = -2 * margin + x * gapX;
+      for (let y = 0; y < this.numPoints; y++) {
+        dataPoints[y][0] = anchorX;
+        dataPoints[y][1] = anchorY - y * gapY;
+      }
+
+      this.strands[x] = new Strand(p5bezier, dataPoints);
+    }
+  }
+
+  draw() {
+    this.strands.forEach((strand) => strand.draw());
+  }
+
+  move() {
+    this.strands.forEach((strand) => strand.move([noiseEffect, stiffnessEffect]));
+
+    for (let x = 1; x < this.numStrands; x++) {
+      for (let y = 1; y < this.numPoints; y++) {
+        const diff =
+          this.strands[x].pointsArray[y][0] -
+          this.strands[x - 1].pointsArray[y][0];
+        if (diff < 6) {
+          this.strands[x].pointsArray[y][0] += 2;
+          this.strands[x - 1].pointsArray[y][0] -= 2;
+        }
+      }
+    }
+  }
+}
