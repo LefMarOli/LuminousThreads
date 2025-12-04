@@ -1,12 +1,12 @@
 class StrandGrid {
-  constructor(p5bezier, width, height, gapX, margin) {
+  constructor(p5bezier, width, height, gapX = 80, margin = 20, numPoints = 10) {
     this.p5bezier = p5bezier;
 
     this.numStrands = floor((width + 4 * margin) / gapX);
     this.strands = Array(this.numStrands);
 
     const anchorY = height - margin;
-    this.numPoints = 11;
+    this.numPoints = numPoints;
     const gapY = ceil((anchorY - margin) / (this.numPoints - 1));
     const dataPoints = Array(this.numPoints);
     for (let y = 0; y < this.numPoints; y++) {

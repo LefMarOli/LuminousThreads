@@ -1,4 +1,3 @@
-const anchorX = 20;
 let strandGrid;
 let p5bezier;
 let canvas;
@@ -10,9 +9,7 @@ function setup() {
   strandGrid = new StrandGrid(
     p5bezier,
     window.innerWidth,
-    window.innerHeight,
-    70,
-    20
+    window.innerHeight
   );
 }
 
@@ -33,9 +30,7 @@ function windowResized() {
   strandGrid = new StrandGrid(
     p5bezier,
     window.innerWidth,
-    window.innerHeight,
-    50,
-    20
+    window.innerHeight
   );
 }
 
