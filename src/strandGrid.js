@@ -7,7 +7,7 @@ class StrandGrid {
 
     const anchorY = height - margin;
     this.numPoints = 11;
-    const gapY = ceil((anchorY - margin) / this.numPoints) + 1;
+    const gapY = ceil((anchorY - margin) / (this.numPoints - 1));
     const dataPoints = Array(this.numPoints);
     for (let y = 0; y < this.numPoints; y++) {
       dataPoints[y] = Array(2);

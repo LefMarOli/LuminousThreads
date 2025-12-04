@@ -12,7 +12,7 @@ class Strand {
     strokeWeight(3);
     this.p5bezier.draw(this.pointsArray);
 
-    this.pointsArray.forEach((p) => ellipse(p[0], p[1], 20, 20));
+    //this.pointsArray.forEach((p) => ellipse(p[0], p[1], 20, 20));
     pop();
   }
 

@@ -39,8 +39,6 @@ function windowResized() {
   );
 }
 
-// If the mouse is pressed,
-// toggle full-screen mode.
 function keyPressed() {
   if (key === "f") {
     let fs = fullscreen();
