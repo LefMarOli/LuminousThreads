@@ -1,13 +1,10 @@
 let strandGrid;
-let p5bezier;
 let canvas;
 
 function setup() {
-  frameRate(24);
+  frameRate(28);
   canvas = createCanvas(window.innerWidth, window.innerHeight);
-  p5bezier = initBezier(canvas);
   strandGrid = new StrandGrid(
-    p5bezier,
     window.innerWidth,
     window.innerHeight
   );
@@ -26,9 +23,7 @@ function draw() {
 
 function windowResized() {
   resizeCanvas(window.innerWidth, window.innerHeight);
-  p5bezier = initBezier(canvas);
   strandGrid = new StrandGrid(
-    p5bezier,
     window.innerWidth,
     window.innerHeight
   );
