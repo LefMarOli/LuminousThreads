@@ -12,7 +12,7 @@ class Strand {
   draw() {
     push();
     noFill();
-    strokeWeight(2);
+    strokeWeight(4);
 
     const startColor = color("#0ef380ff");
     const endColor = color("#db0a15ff");
@@ -24,13 +24,13 @@ class Strand {
       const amt = map(index, 0, this.#bezierCurve.interpolationPoints(), 0, 1);
       const gradColor = lerpColor(startColor, endColor, amt);
       stroke(gradColor);
-      vertex(...this.#bezierCurve.getVertex(index));
-      ellipse(...this.#bezierCurve.getVertex(index), 5, 5)
+      curveVertex(...this.#bezierCurve.getVertex(index));
+      //ellipse(...this.#bezierCurve.getVertex(index), 5, 5)
     }
 
     endShape();
 
-    stroke(color("#4dafc0ff"));
+    //stroke(color("#4dafc0ff"));
     //this.#pointsArray.forEach((p) => ellipse(p[0], p[1], 20, 20));
 
     pop();
