@@ -2,36 +2,59 @@ class Strand {
   #pointsArray;
   #initArray;
   #bezierCurve;
+  #startColor;
+  #endColor;
 
-  constructor(pointsArray) {
+  constructor(pointsArray, startColor, endColor) {
     this.#pointsArray = pointsArray.map((row) => [...row]);
     this.#initArray = pointsArray.map((row) => [...row]);
     this.#bezierCurve = new BezierCurve(pointsArray);
+    this.#startColor = startColor;
+    this.#endColor = endColor;
   }
 
   draw() {
     push();
     noFill();
-    strokeWeight(4);
+    strokeWeight(2);
+    colorMode(HSB, 360, 100, 100);
 
-    const startColor = color("#0ef380ff");
-    const endColor = color("#db0a15ff");
+    console.log(0.1 * frameCount);
 
-    stroke(color("#2e0fb6ff"));
-    beginShape();
+    const newStartColor = color(
+      (hue(this.#startColor) + frameCount) % 360,
+      100,
+      100
+    );
+    const newEndColor = color(
+      (hue(this.#endColor) + frameCount) % 360,
+      100,
+      100
+    );
 
-    for (let index = 0; index < this.#bezierCurve.interpolationPoints(); index++) {
-      const amt = map(index, 0, this.#bezierCurve.interpolationPoints(), 0, 1);
-      const gradColor = lerpColor(startColor, endColor, amt);
+    for (
+      let index = 1;
+      index < this.#bezierCurve.interpolationPoints();
+      index++
+    ) {
+      const amt = map(
+        index - 1,
+        0,
+        this.#bezierCurve.interpolationPoints(),
+        0,
+        1
+      );
+      const gradColor = lerpColor(newStartColor, newEndColor, amt);
       stroke(gradColor);
-      curveVertex(...this.#bezierCurve.getVertex(index));
+      beginShape();
+      vertex(...this.#bezierCurve.getVertex(index - 1));
+      vertex(...this.#bezierCurve.getVertex(index));
+      endShape();
       //ellipse(...this.#bezierCurve.getVertex(index), 5, 5)
     }
 
-    endShape();
-
     //stroke(color("#4dafc0ff"));
-    //this.#pointsArray.forEach((p) => ellipse(p[0], p[1], 20, 20));
+    //this.#pointsArray.forEach((p) => ellipse(p[0], p[1], 10, 10));
 
     pop();
   }
@@ -47,11 +70,11 @@ class Strand {
     this.#bezierCurve.updateControlPoints(this.#pointsArray);
   }
 
-  getPointAt(index){
+  getPointAt(index) {
     return this.#pointsArray[index];
   }
 
-  getInitPosAt(index){
+  getInitPosAt(index) {
     return this.#initArray[index];
   }
 }

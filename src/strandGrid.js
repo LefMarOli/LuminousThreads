@@ -1,5 +1,8 @@
 class StrandGrid {
-  constructor(width, height, gapX = 60, margin = 20, numPoints = 30) {
+  constructor(width, height, gapX = 90, margin = 20, numPoints = 30) {
+    colorMode(HSB, 360, 100, 100);
+    this.startColor = color("#380ef3ff");
+    this.endColor = color("#db680aff");
 
     this.numStrands = floor((width + 4 * margin) / gapX);
     this.strands = Array(this.numStrands);
@@ -19,7 +22,12 @@ class StrandGrid {
         dataPoints[y][1] = anchorY - y * gapY;
       }
 
-      this.strands[x] = new Strand(dataPoints);
+      const amt = map(x, 0, this.numStrands, 0, 360);
+
+      const newStartColor = color((hue(this.startColor) + amt) % 360, 100, 100);
+      const newEndColor = color((hue(this.endColor)) % 360, 100, 100);
+
+      this.strands[x] = new Strand(dataPoints, newStartColor, newEndColor);
     }
   }
 
@@ -28,6 +36,8 @@ class StrandGrid {
   }
 
   move() {
-    this.strands.forEach((strand) => strand.move([noiseEffect, stiffnessEffect]));
+    this.strands.forEach((strand) =>
+      strand.move([noiseEffect, stiffnessEffect])
+    );
   }
 }

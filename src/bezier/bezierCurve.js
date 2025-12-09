@@ -5,7 +5,7 @@ class BezierCurve {
   #vertices;
   #n;
 
-  constructor(controlPoints, interpolationPoints = 50) {
+  constructor(controlPoints, interpolationPoints = 100) {
     if (controlPoints.length < 2)
       throw new Error("Need at least 2 points for a Bezier curve");
 
