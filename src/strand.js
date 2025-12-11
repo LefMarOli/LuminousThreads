@@ -20,7 +20,7 @@ class Strand {
   draw() {
     push();
     noFill();
-    strokeWeight(1);
+    strokeWeight(2);
     colorMode(HSB, 360, 100, 100, 1);
     strokeCap(SQUARE);
 
