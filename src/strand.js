@@ -2,13 +2,15 @@ class Strand {
   #pointsArray;
   #initArray;
   #bezierCurve;
+  #interpolationPoints;
   #startColor;
   #endColor;
 
-  constructor(pointsArray, startColor, endColor) {
-    this.#pointsArray = pointsArray.map((row) => [...row]);
-    this.#initArray = pointsArray.map((row) => [...row]);
-    this.#bezierCurve = new BezierCurve(pointsArray);
+  constructor(pointsArray, interpolationPoints, startColor, endColor) {
+    this.#pointsArray = pointsArray.map((p) => new Point(p.x, p.y));
+    this.#initArray = pointsArray.map((p) => new Point(p.x, p.y));
+    this.#interpolationPoints = interpolationPoints;
+    this.#bezierCurve = new BezierCurve(pointsArray, interpolationPoints);
     this.#startColor = startColor;
     this.#endColor = endColor;
   }
@@ -18,8 +20,6 @@ class Strand {
     noFill();
     strokeWeight(2);
     colorMode(HSB, 360, 100, 100);
-
-    console.log(0.1 * frameCount);
 
     const newStartColor = color(
       (hue(this.#startColor) + frameCount) % 360,
@@ -32,23 +32,15 @@ class Strand {
       100
     );
 
-    for (
-      let index = 1;
-      index < this.#bezierCurve.interpolationPoints();
-      index++
-    ) {
-      const amt = map(
-        index - 1,
-        0,
-        this.#bezierCurve.interpolationPoints(),
-        0,
-        1
-      );
+    for (let index = 1; index < this.#interpolationPoints; index++) {
+      const amt = map(index - 1, 0, this.#interpolationPoints, 0, 1);
       const gradColor = lerpColor(newStartColor, newEndColor, amt);
       stroke(gradColor);
       beginShape();
-      vertex(...this.#bezierCurve.getVertex(index - 1));
-      vertex(...this.#bezierCurve.getVertex(index));
+      const p1 = this.#bezierCurve.getVertex(index - 1);
+      vertex(p1.x, p1.y);
+      const p2 = this.#bezierCurve.getVertex(index);
+      vertex(p2.x, p2.y);
       endShape();
       //ellipse(...this.#bezierCurve.getVertex(index), 5, 5)
     }
@@ -63,7 +55,7 @@ class Strand {
     //Starts at 1 to ignore bottom anchor
     for (let index = 1; index < this.#pointsArray.length; index++) {
       effects.forEach((effect) => {
-        this.#pointsArray[index][0] += effect(this, index);
+        this.#pointsArray[index].x += effect(this, index);
       });
     }
 

@@ -4,7 +4,9 @@ function noiseEffect(strand, index) {
   const nt = 0.01 * frameCount;
   const noiseLevel = 10;
 
-  const point = strand.getPointAt(index)
+  const point = strand.getPointAt(index);
 
-  return noiseLevel * (noise(point[0] * noiseScaleX, point[1] * noiseScaleY, nt) - 0.5);
+  return (
+    noiseLevel * (noise(point.x * noiseScaleX, point.y * noiseScaleY, nt) - 0.5)
+  );
 }
