@@ -44,9 +44,6 @@ class BezierCurve {
   }
 
   updateControlPoints(controlPoints) {
-    if (controlPoints.length != this.#controlPoints.length)
-      throw new Error("Amount of control points changed");
-
     this.#controlPoints = controlPoints;
     this.#_buildVertices();
   }
@@ -71,8 +68,6 @@ class BezierCurve {
   }
 
   getVertex(index) {
-    if (index >= this.#interpolationPoints) throw new Error("Out of bounds");
-
     return this.#vertices[index];
   }
 }

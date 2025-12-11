@@ -20,7 +20,7 @@ class Strand {
   draw() {
     push();
     noFill();
-    strokeWeight(2);
+    strokeWeight(1);
     colorMode(HSB, 360, 100, 100, 1);
     strokeCap(SQUARE);
 
@@ -50,19 +50,13 @@ class Strand {
       const p1 = this.#bezierCurve.getVertex(index - 1);
       const p2 = this.#bezierCurve.getVertex(index);
       line(p1.x, p1.y, p2.x, p2.y);
-
-      //ellipse(...this.#bezierCurve.getVertex(index), 5, 5)
     }
-
-    //stroke(color("#4dafc0ff"));
-    //this.#pointsArray.forEach((p) => ellipse(p[0], p[1], 10, 10));
 
     pop();
   }
 
   move(effects) {
-    //Starts at 1 to ignore bottom anchor
-    for (let index = 1; index < this.#pointsArray.length; index++) {
+    for (let index = 0; index < this.#pointsArray.length; index++) {
       effects.forEach((effect) => {
         this.#pointsArray[index].x += effect(this, index);
       });
