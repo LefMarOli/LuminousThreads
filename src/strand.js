@@ -3,45 +3,54 @@ class Strand {
   #initArray;
   #bezierCurve;
   #interpolationPoints;
-  #startColor;
-  #endColor;
+  #startHue;
+  #endHue;
+  #fadePerc = 0.25;
 
-  constructor(pointsArray, interpolationPoints, startColor, endColor) {
+  constructor(pointsArray, interpolationPoints, startHue, endHue) {
     this.#pointsArray = pointsArray.map((p) => new Point(p.x, p.y));
     this.#initArray = pointsArray.map((p) => new Point(p.x, p.y));
     this.#interpolationPoints = interpolationPoints;
     this.#bezierCurve = new BezierCurve(pointsArray, interpolationPoints);
-    this.#startColor = startColor;
-    this.#endColor = endColor;
+    this.#startHue = startHue;
+    this.#endHue = endHue;
+    colorMode(HSB, 360, 100, 100, 1);
   }
 
   draw() {
     push();
     noFill();
     strokeWeight(2);
-    colorMode(HSB, 360, 100, 100);
+    colorMode(HSB, 360, 100, 100, 1);
+    strokeCap(SQUARE);
 
-    const newStartColor = color(
-      (hue(this.#startColor) + frameCount) % 360,
-      100,
-      100
-    );
-    const newEndColor = color(
-      (hue(this.#endColor) + frameCount) % 360,
-      100,
-      100
-    );
-
+    const newStartHue = (this.#startHue + frameCount) % 360;
+    const newEndHue = (this.#endHue + frameCount) % 360;
     for (let index = 1; index < this.#interpolationPoints; index++) {
-      const amt = map(index - 1, 0, this.#interpolationPoints, 0, 1);
-      const gradColor = lerpColor(newStartColor, newEndColor, amt);
+      const heightPerc = (index - 1) / this.#interpolationPoints;
+
+      let startColor;
+      if (heightPerc < this.#fadePerc)
+        startColor = color(newStartHue, 100, 100, heightPerc / this.#fadePerc);
+      else startColor = color(newStartHue, 100, 100);
+
+      let endColor;
+      if (1 - heightPerc < this.#fadePerc)
+        endColor = color(
+          newEndHue,
+          100,
+          100,
+          (1 - heightPerc) / this.#fadePerc
+        );
+      else endColor = color(newEndHue, 100, 100);
+
+      const gradColor = lerpColor(startColor, endColor, heightPerc);
       stroke(gradColor);
-      beginShape();
+
       const p1 = this.#bezierCurve.getVertex(index - 1);
-      vertex(p1.x, p1.y);
       const p2 = this.#bezierCurve.getVertex(index);
-      vertex(p2.x, p2.y);
-      endShape();
+      line(p1.x, p1.y, p2.x, p2.y);
+
       //ellipse(...this.#bezierCurve.getVertex(index), 5, 5)
     }
 

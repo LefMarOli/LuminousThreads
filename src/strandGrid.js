@@ -2,19 +2,19 @@ class StrandGrid {
   constructor(
     width,
     height,
-    gapX = 90,
-    margin = 20,
+    gapX = 20,
+    margin = 10,
     numPoints = 30,
-    interpolationPoints = 100
+    interpolationPoints = 70
   ) {
     colorMode(HSB, 360, 100, 100);
     this.startColor = color("#380ef3ff");
     this.endColor = color("#db680aff");
 
-    this.numStrands = floor((width + 4 * margin) / gapX);
+    this.numStrands = floor((width + 8 * gapX) / gapX);
     this.strands = Array(this.numStrands);
 
-    const anchorY = height - margin;
+    const anchorY = height + margin;
     this.numPoints = numPoints;
     mapCoefficients(numPoints, interpolationPoints);
     const gapY = ceil((anchorY - margin) / (this.numPoints - 1));
@@ -32,14 +32,14 @@ class StrandGrid {
 
       const amt = map(row, 0, this.numStrands, 0, 360);
 
-      const newStartColor = color((hue(this.startColor) + amt) % 360, 100, 100);
-      const newEndColor = color(hue(this.endColor) % 360, 100, 100);
+      const startHue = (hue(this.startColor) + amt) % 360;
+      const endHue = (hue(this.endColor) + amt) % 360;
 
       this.strands[row] = new Strand(
         dataPoints,
         interpolationPoints,
-        newStartColor,
-        newEndColor
+        startHue,
+        endHue
       );
     }
   }
