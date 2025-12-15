@@ -8,7 +8,7 @@ class StrandGrid {
     margin = 10,
     numPoints = 30,
     interpolationPoints = 90,
-    loopDuration = 10
+    loopDuration = 5
   ) {
     colorMode(HSB, 360, 100, 100);
     this.startColor = color("#380ef3ff");

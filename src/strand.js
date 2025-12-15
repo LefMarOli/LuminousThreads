@@ -7,6 +7,7 @@ class Strand {
   #endHue;
   #fadePerc = 0.25;
   #colorSpeed;
+  #minColorSpeed = 0.1;
 
   constructor(
     pointsArray,
@@ -21,7 +22,10 @@ class Strand {
     this.#bezierCurve = new BezierCurve(pointsArray, interpolationPoints);
     this.#startHue = startHue;
     this.#endHue = endHue;
-    this.#colorSpeed = 360 / (loopDuration * 1000);
+    const n = Math.max(Math.floor(loopDuration * this.#minColorSpeed), 1);
+    console.log(n);
+    this.#colorSpeed = (360 * n) / (loopDuration * 1000);
+
     colorMode(HSB, 360, 100, 100, 1);
   }
 
@@ -42,7 +46,12 @@ class Strand {
 
       let startColor;
       if (heightPerc < this.#fadePerc)
-        startColor = color(this.#startHue, 100, 100, heightPerc / this.#fadePerc);
+        startColor = color(
+          this.#startHue,
+          100,
+          100,
+          heightPerc / this.#fadePerc
+        );
       else startColor = color(this.#startHue, 100, 100);
 
       let endColor;
