@@ -11,6 +11,7 @@ function setup() {
 
 function draw() {
   background(0, 0, 0);
+  noiseSeed(99);
 
   stroke(255, 255, 255);
   strokeWeight(2);

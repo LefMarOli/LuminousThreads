@@ -6,14 +6,22 @@ class Strand {
   #startHue;
   #endHue;
   #fadePerc = 0.25;
+  #colorSpeed;
 
-  constructor(pointsArray, interpolationPoints, startHue, endHue) {
+  constructor(
+    pointsArray,
+    interpolationPoints,
+    startHue,
+    endHue,
+    loopDuration
+  ) {
     this.#pointsArray = pointsArray.map((p) => new Point(p.x, p.y));
     this.#initArray = pointsArray.map((p) => new Point(p.x, p.y));
     this.#interpolationPoints = interpolationPoints;
     this.#bezierCurve = new BezierCurve(pointsArray, interpolationPoints);
     this.#startHue = startHue;
     this.#endHue = endHue;
+    this.#colorSpeed = 360 / (loopDuration * 1000);
     colorMode(HSB, 360, 100, 100, 1);
   }
 
@@ -24,25 +32,28 @@ class Strand {
     colorMode(HSB, 360, 100, 100, 1);
     strokeCap(SQUARE);
 
-    const newStartHue = (this.#startHue + frameCount) % 360;
-    const newEndHue = (this.#endHue + frameCount) % 360;
+    this.#startHue += this.#colorSpeed * deltaTime;
+    this.#startHue %= 360;
+    this.#endHue += this.#colorSpeed * deltaTime;
+    this.#endHue %= 360;
+
     for (let index = 1; index < this.#interpolationPoints; index++) {
       const heightPerc = (index - 1) / this.#interpolationPoints;
 
       let startColor;
       if (heightPerc < this.#fadePerc)
-        startColor = color(newStartHue, 100, 100, heightPerc / this.#fadePerc);
-      else startColor = color(newStartHue, 100, 100);
+        startColor = color(this.#startHue, 100, 100, heightPerc / this.#fadePerc);
+      else startColor = color(this.#startHue, 100, 100);
 
       let endColor;
       if (1 - heightPerc < this.#fadePerc)
         endColor = color(
-          newEndHue,
+          this.#endHue,
           100,
           100,
           (1 - heightPerc) / this.#fadePerc
         );
-      else endColor = color(newEndHue, 100, 100);
+      else endColor = color(this.#endHue, 100, 100);
 
       const gradColor = lerpColor(startColor, endColor, heightPerc);
       stroke(gradColor);

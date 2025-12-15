@@ -1,11 +1,14 @@
 class StrandGrid {
+  #perlinNoise;
+
   constructor(
     width,
     height,
-    gapX = 20,
+    gapX = 30,
     margin = 10,
     numPoints = 30,
-    interpolationPoints = 70
+    interpolationPoints = 90,
+    loopDuration = 10
   ) {
     colorMode(HSB, 360, 100, 100);
     this.startColor = color("#380ef3ff");
@@ -38,9 +41,12 @@ class StrandGrid {
         dataPoints,
         interpolationPoints,
         startHue,
-        endHue
+        endHue,
+        loopDuration
       );
     }
+
+    this.#perlinNoise = new PerlinNoise(loopDuration);
   }
 
   draw() {
@@ -48,8 +54,9 @@ class StrandGrid {
   }
 
   move() {
+    this.#perlinNoise.noiseStep();
     this.strands.forEach((strand) =>
-      strand.move([noiseEffect, stiffnessEffect])
+      strand.move([this.#perlinNoise.noiseEffect, stiffnessEffect])
     );
   }
 }
