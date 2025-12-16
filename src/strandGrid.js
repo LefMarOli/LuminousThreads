@@ -8,7 +8,7 @@ class StrandGrid {
     margin = 10,
     numPoints = 30,
     interpolationPoints = 90,
-    loopDuration = 5
+    loopDuration = 50
   ) {
     colorMode(HSB, 360, 100, 100);
     this.startColor = color("#380ef3ff");
@@ -46,7 +46,7 @@ class StrandGrid {
       );
     }
 
-    this.#perlinNoise = new PerlinNoise(loopDuration);
+    this.#perlinNoise = new PerlinNoise(17, loopDuration);
   }
 
   draw() {

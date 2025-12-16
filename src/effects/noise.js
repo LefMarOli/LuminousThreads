@@ -5,12 +5,15 @@ const TWO_PI = Math.PI * 2;
 let z;
 let w;
 let R;
+let Simplex;
 
 class PerlinNoise {
   #speedRadians;
   #angle;
 
-  constructor(loopTime) {
+  constructor(seed, loopTime) {
+    Simplex = new SimplexNoise(seed ?? Math.random);
+
     this.#speedRadians = TWO_PI / (loopTime * 1000);
     this.#angle = 0;
     R = loopTime / 25.0;
@@ -26,22 +29,12 @@ class PerlinNoise {
   }
 
   noiseEffect(strand, index) {
-    const point = strand.getPointAt(index);
+    const point = strand.pointsArray[index];
 
     const x = point.x * noiseScaleX;
     const y = point.y * noiseScaleY;
 
-    /*
-    const nt = 0.01 * frameCount;
-    const noise1 = noise(x, y, z);
-    const noise2 = noise(x, y, z);
-    const noise3 = noise(x, z, w);
-    const noise4 = noise(y, z, w);
-    */
-    //const noiseValue = (noise1 + noise2 + noise3 + noise4) / 4;
-
-    const noiseValue = fractalPerlinNoise4d(x, y, z, w);
-
-    return noiseLevel * (noiseValue - 0.5);
+    const noiseValue = Simplex.noise4D(x, y, z, w);
+    return noiseLevel * noiseValue / 2.0;
   }
 }
