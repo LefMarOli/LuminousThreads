@@ -6,12 +6,12 @@ class Strand {
   #interpolationPoints;
   #startHue;
   #endHue;
-  #fadePerc = 0.25;
+  #fadePerc = 0.45;
   #colorSpeed;
   #minColorSpeed = 0.1;
   #mode = "NoShow"; //Normal, Entering, Exiting, NoShow
   #travelDirection = "Top"; //Top, Bottom
-  #travelTrailSize = 20;
+  #travelTrailSize = 40;
   #travelSpeed = 0.01;
   #travelPos;
   #peakProbability = 0.01;
@@ -19,6 +19,9 @@ class Strand {
   #exitingProbability = 0;
   #loopDuration;
   #loopTimestamp = 0;
+  #auraWidth = 2;
+  #auraDecreaseFactor = 1 / this.#auraWidth;
+  #gradient;
 
   constructor(
     pointsArray,
@@ -53,10 +56,12 @@ class Strand {
     if (this.#mode === "NoShow") return;
 
     push();
-    noFill();
-    strokeWeight(2);
+    //noFill();
     colorMode(HSB, 360, 100, 100, 1);
     strokeCap(SQUARE);
+    //noStroke()
+    strokeWeight(2);
+    //beginShape(QUAD_STRIP);
 
     for (let index = 1; index < this.#interpolationPoints; index++) {
       const heightPerc = (index - 1) / this.#interpolationPoints;
@@ -74,10 +79,54 @@ class Strand {
         alpha(gradColor)
       );
 
-      stroke(gradColor);
+      /*
+      const diffX = Math.abs(p1.x - p2.x);
+      const diffY = Math.abs(p1.y - p2.y);
+      const theta = Math.atan(diffX / diffY);
+      const offX = this.#auraWidth * Math.cos(theta);
+      const offY = this.#auraWidth * Math.sin(theta);
 
+      /*
+      const middleX = Math.min(p1.x, p2.x) + diffX;
+      const middleY = Math.min(p1.y, p2.y) + diffY;
+
+      this.#gradient = drawingContext.createLinearGradient(
+        middleX - offX,
+        p1.x > p2.x ? middleY + offY : middleY - offY,
+        middleX + offX,
+        p1.x > p2.x ? middleY - offY : middleY + offY
+      );
+
+      this.#gradient.addColorStop(0, color(0, 0, 0, 0));
+      this.#gradient.addColorStop(0.5, gradColor);
+      this.#gradient.addColorStop(1, color(0, 0, 0, 0));
+
+      drawingContext.fillStyle = this.#gradient;
+      
+
+      fill(gradColor);
+      vertex(p1.x + offX, p1.x > p2.x ? p1.y - offY : p1.y + offY, 0);
+      vertex(p1.x - offX, p1.x > p2.x ? p1.y + offY : p1.y - offY, 0);
+
+      /*
+      for (let a = 1; a < this.#auraWidth + 1; a++) {
+        let auraColor = color(
+          hue(gradColor),
+          saturation(gradColor),
+          brightness(gradColor) * (1 - a * this.#auraDecreaseFactor),
+          alpha(gradColor)
+        );
+        stroke(auraColor);
+        strokeWeight(a);
+      }
+        */
+
+      stroke(gradColor);
+      fill(gradColor);
       line(p1.x, p1.y, p2.x, p2.y);
     }
+
+    //endShape();
 
     pop();
   }
@@ -142,7 +191,7 @@ class Strand {
 
   #highlightFactor(p1, p2) {
     const middleX = (p1.x + p2.x) / 2.0;
-    const fa = 1.0 / Math.pow(Math.abs(this.initX - middleX), 1 / 5);
+    const fa = 1.0 / Math.pow(Math.abs(this.initX - middleX), 1 / 9);
     return fa;
   }
 
@@ -170,10 +219,10 @@ class Strand {
       this.#mode = "Exiting";
       if (Math.random() > 0.5) {
         this.#travelDirection = "Top";
-        this.#travelPos = 0;
+        this.#travelPos = -this.#travelTrailSize;
       } else {
         this.#travelDirection = "Bottom";
-        this.#travelPos = this.#interpolationPoints;
+        this.#travelPos = this.#interpolationPoints + this.#travelTrailSize;
       }
     } else if (
       this.#mode === "NoShow" &&
