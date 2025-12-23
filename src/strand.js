@@ -37,7 +37,9 @@ class Strand {
     this.#loopDuration = loopDuration * 1000;
     const n = Math.max(Math.floor(loopDuration * this.#minColorSpeed), 1);
     this.#colorSpeed = (360 * n) / (loopDuration * 1000);
-    this.#travelSpeed = loopDuration / 10000;
+
+    const travelSpeedFactor = loopDuration / 50;
+    this.#travelSpeed = loopDuration / travelSpeedFactor / 10000;
 
     colorMode(HSB, 360, 100, 100, 1);
   }
