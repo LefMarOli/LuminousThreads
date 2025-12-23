@@ -17,6 +17,7 @@ class Strand {
   #peakProbability = 0.01;
   #enteringProbability = this.#peakProbability;
   #exitingProbability = 0;
+  #probabilityPhaseShift = Math.PI / 2;
   #loopDuration;
   #loopTimestamp = 0;
 
@@ -38,7 +39,7 @@ class Strand {
     const n = Math.max(Math.floor(loopDuration * this.#minColorSpeed), 1);
     this.#colorSpeed = (360 * n) / (loopDuration * 1000);
 
-    const travelSpeedFactor = (loopDuration * interpolationPoints) / (50 * 90);
+    const travelSpeedFactor = (loopDuration * 90) / (50 * interpolationPoints);
     this.#travelSpeed =
       (loopDuration * interpolationPoints) / (travelSpeedFactor * 1000000);
 
@@ -55,7 +56,6 @@ class Strand {
     push();
     colorMode(HSB, 360, 100, 100, 1);
     strokeCap(SQUARE);
-    strokeWeight(2);
 
     for (let index = 1; index < this.#interpolationPoints; index++) {
       const heightPerc = (index - 1) / this.#interpolationPoints;
@@ -73,7 +73,19 @@ class Strand {
         alpha(gradColor)
       );
 
+      strokeWeight(6);
+      stroke(
+        color(
+          hue(gradColor),
+          saturation(gradColor),
+          brightness(gradColor),
+          alpha(gradColor) * 0.3
+        )
+      );
+      line(p1.x, p1.y, p2.x, p2.y);
+
       stroke(gradColor);
+      strokeWeight(2);
       line(p1.x, p1.y, p2.x, p2.y);
     }
 
@@ -96,7 +108,7 @@ class Strand {
       this.#peakProbability * Math.sin(animationProgress * Math.PI);
     this.#enteringProbability =
       this.#peakProbability *
-      Math.sin(animationProgress * Math.PI + Math.PI / 2);
+      Math.sin(animationProgress * Math.PI + this.#probabilityPhaseShift);
 
     if (this.#mode === "Normal" || this.#mode === "NoShow") return;
 

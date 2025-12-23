@@ -7,7 +7,7 @@ class StrandGrid {
     gapX = 30,
     margin = 10,
     numPoints = 30,
-    interpolationPoints = 90,
+    interpolationPoints = 120,
     loopDuration = 50
   ) {
     colorMode(HSB, 360, 100, 100);

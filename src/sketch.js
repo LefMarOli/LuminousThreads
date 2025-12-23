@@ -7,12 +7,11 @@ function setup() {
   frameRate(60);
   canvas = createCanvas(window.innerWidth, window.innerHeight);
   strandGrid = new StrandGrid(window.innerWidth, window.innerHeight);
-  noCursor();
 }
 
 function draw() {
   background(0, 0, 0);
-  noiseSeed(99);
+  noiseSeed();
 
   strandGrid.move();
   strandGrid.draw();
