@@ -103,10 +103,17 @@ class Strand {
       case "Entering":
         let factor =
           this.#travelDirection === "Top"
-            ? (this.#travelPos - index)
-            : (index - this.#travelPos);
+            ? this.#travelPos - index
+            : index - this.#travelPos;
         factor /= this.#travelTrailSize;
         return Math.min(Math.max(factor, 0), 1);
+      case "Exiting":
+        let exitFactor =
+          this.#travelDirection === "Top"
+            ? index - this.#travelPos
+            : this.#travelPos - index;
+        exitFactor /= this.#travelTrailSize;
+        return Math.min(Math.max(exitFactor, 0), 1);
       default:
         return 1;
     }
