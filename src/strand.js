@@ -38,8 +38,9 @@ class Strand {
     const n = Math.max(Math.floor(loopDuration * this.#minColorSpeed), 1);
     this.#colorSpeed = (360 * n) / (loopDuration * 1000);
 
-    const travelSpeedFactor = loopDuration / 50;
-    this.#travelSpeed = loopDuration / travelSpeedFactor / 10000;
+    const travelSpeedFactor = (loopDuration * interpolationPoints) / (50 * 90);
+    this.#travelSpeed =
+      (loopDuration * interpolationPoints) / (travelSpeedFactor * 1000000);
 
     colorMode(HSB, 360, 100, 100, 1);
   }
@@ -96,8 +97,8 @@ class Strand {
     this.#exitingProbability =
       this.#peakProbability * Math.sin(animationProgress * Math.PI);
     this.#enteringProbability =
-      this.#peakProbability * Math.sin(animationProgress * Math.PI + Math.PI / 2);
-
+      this.#peakProbability *
+      Math.sin(animationProgress * Math.PI + Math.PI / 2);
 
     if (this.#mode === "Normal" || this.#mode === "NoShow") return;
 
