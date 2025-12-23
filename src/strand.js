@@ -12,8 +12,13 @@ class Strand {
   #mode = "NoShow"; //Normal, Entering, Exiting, NoShow
   #travelDirection = "Top"; //Top, Bottom
   #travelTrailSize = 20;
-  #travelSpeed = 0.04;
+  #travelSpeed = 0.01;
   #travelPos;
+  #peakProbability = 0.01;
+  #enteringProbability = this.#peakProbability;
+  #exitingProbability = 0;
+  #loopDuration;
+  #loopTimestamp = 0;
 
   constructor(
     pointsArray,
@@ -29,8 +34,8 @@ class Strand {
     this.#bezierCurve = new BezierCurve(pointsArray, interpolationPoints);
     this.#startHue = startHue;
     this.#endHue = endHue;
+    this.#loopDuration = loopDuration * 1000;
     const n = Math.max(Math.floor(loopDuration * this.#minColorSpeed), 1);
-    console.log(n);
     this.#colorSpeed = (360 * n) / (loopDuration * 1000);
 
     colorMode(HSB, 360, 100, 100, 1);
@@ -81,15 +86,25 @@ class Strand {
   }
 
   #updateTravel() {
+    this.#loopTimestamp += deltaTime;
+    this.#loopTimestamp %= this.#loopDuration;
+
+    const animationProgress = this.#loopTimestamp / this.#loopDuration;
+    this.#exitingProbability =
+      this.#peakProbability * Math.sin(animationProgress * Math.PI);
+    this.#enteringProbability =
+      this.#peakProbability * Math.sin(animationProgress * Math.PI + Math.PI / 2);
+
+
     if (this.#mode === "Normal" || this.#mode === "NoShow") return;
 
     if (this.#travelDirection === "Top") {
       this.#travelPos += this.#travelSpeed * deltaTime;
-      if (this.#travelPos >= this.#interpolationPoints)
+      if (this.#travelPos >= this.#interpolationPoints + this.#travelTrailSize)
         this.#mode = this.#mode === "Entering" ? "Normal" : "NoShow";
     } else if (this.#travelDirection === "Bottom") {
       this.#travelPos -= this.#travelSpeed * deltaTime;
-      if (this.#travelPos <= 0)
+      if (this.#travelPos <= -this.#travelTrailSize)
         this.#mode = this.#mode === "Entering" ? "Normal" : "NoShow";
     }
   }
@@ -100,20 +115,22 @@ class Strand {
         return 0;
       case "Normal":
         return 1;
-      case "Entering":
+      case "Entering": {
         let factor =
           this.#travelDirection === "Top"
             ? this.#travelPos - index
             : index - this.#travelPos;
         factor /= this.#travelTrailSize;
         return Math.min(Math.max(factor, 0), 1);
-      case "Exiting":
-        let exitFactor =
+      }
+      case "Exiting": {
+        let factor =
           this.#travelDirection === "Top"
             ? index - this.#travelPos
             : this.#travelPos - index;
-        exitFactor /= this.#travelTrailSize;
-        return Math.min(Math.max(exitFactor, 0), 1);
+        factor /= this.#travelTrailSize;
+        return Math.min(Math.max(factor, 0), 1);
+      }
       default:
         return 1;
     }
@@ -145,7 +162,7 @@ class Strand {
   }
 
   #switchMode() {
-    if (this.#mode === "Normal" && Math.random() < 0.001) {
+    if (this.#mode === "Normal" && Math.random() < this.#exitingProbability) {
       this.#mode = "Exiting";
       if (Math.random() > 0.5) {
         this.#travelDirection = "Top";
@@ -154,7 +171,10 @@ class Strand {
         this.#travelDirection = "Bottom";
         this.#travelPos = this.#interpolationPoints;
       }
-    } else if (this.#mode === "NoShow" && Math.random() < 0.001) {
+    } else if (
+      this.#mode === "NoShow" &&
+      Math.random() < this.#enteringProbability
+    ) {
       this.#mode = "Entering";
       if (Math.random() > 0.5) {
         this.#travelDirection = "Top";
