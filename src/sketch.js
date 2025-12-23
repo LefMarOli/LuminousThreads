@@ -5,8 +5,8 @@ let canvas;
 
 function setup() {
   frameRate(60);
-  canvas = createCanvas(window.innerWidth, window.innerHeight);
-  strandGrid = new StrandGrid(window.innerWidth, window.innerHeight);
+  canvas = createCanvas(window.outerWidth, window.outerHeight);
+  strandGrid = new StrandGrid(window.outerWidth, window.outerHeight);
 }
 
 function draw() {
@@ -18,8 +18,8 @@ function draw() {
 }
 
 function windowResized() {
-  resizeCanvas(window.innerWidth, window.innerHeight);
-  strandGrid = new StrandGrid(window.innerWidth, window.innerHeight);
+  resizeCanvas(window.outerWidth, window.outerHeight);
+  strandGrid = new StrandGrid(window.outerWidth, window.outerHeight);
 }
 
 function keyPressed() {
