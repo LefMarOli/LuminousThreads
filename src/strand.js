@@ -176,6 +176,7 @@ class Strand {
   }
 
   #switchMode() {
+    //return;
     if (this.#mode === "Normal" && Math.random() < this.#exitingProbability) {
       this.#mode = "Exiting";
       if (Math.random() > 0.5) {

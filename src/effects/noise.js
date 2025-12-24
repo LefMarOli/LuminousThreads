@@ -6,10 +6,15 @@ let z;
 let w;
 let R;
 let Simplex;
+const maxWarpFactor = 1.5;
+const minWarpFactor = 1.0;
+const warpDelay = 1 / 1000;
+let warpFactor = 1;
 
 class PerlinNoise {
   #speedRadians;
   #angle;
+  #warpProgress = 0;
 
   constructor(seed, loopTime) {
     Simplex = new SimplexNoise(seed ?? Math.random);
@@ -21,7 +26,19 @@ class PerlinNoise {
     w = R;
   }
 
-  noiseStep() {
+  noiseStep(flag) {
+    if (flag === "Increasing" && warpFactor < maxWarpFactor) {
+      const current = sigmoid(this.#warpProgress);
+      this.#warpProgress += deltaTime * warpDelay;
+      const next = sigmoid(this.#warpProgress);
+      warpFactor += next - current;
+    } else if (flag === "Decreasing" && warpFactor > minWarpFactor) {
+      const current = sigmoid(this.#warpProgress);
+      this.#warpProgress -= deltaTime * warpDelay;
+      const next = sigmoid(this.#warpProgress);
+      warpFactor -= current - next;
+    }
+
     this.#angle += this.#speedRadians * deltaTime;
     this.#angle %= TWO_PI;
     z = R * Math.cos(this.#angle);
@@ -31,10 +48,10 @@ class PerlinNoise {
   noiseEffect(strand, index) {
     const point = strand.pointsArray[index];
 
-    const x = point.x * noiseScaleX;
-    const y = point.y * noiseScaleY;
+    const x = point.x * noiseScaleX * warpFactor;
+    const y = point.y * noiseScaleY * warpFactor;
 
     const noiseValue = Simplex.noise4D(x, y, z, w);
-    return noiseLevel * noiseValue / 2.0;
+    return (noiseLevel * noiseValue) / 2.0;
   }
 }
