@@ -1,13 +1,15 @@
 class StrandGrid {
   #perlinNoise;
+  #warpState = "Decreasing"; //Increasing, Decreasing
+  #warpProbability = 0.5;
 
   constructor(
     width,
     height,
-    gapX = 30,
+    gapX = 20,
     margin = 10,
     numPoints = 30,
-    interpolationPoints = 120,
+    interpolationPoints = 150,
     loopDuration = 50
   ) {
     colorMode(HSB, 360, 100, 100);
@@ -47,6 +49,13 @@ class StrandGrid {
     }
 
     this.#perlinNoise = new PerlinNoise(17, loopDuration);
+
+    setInterval(() => {
+      if (Math.random() < this.#warpProbability) {
+        this.#warpState = "Increasing";
+        setTimeout(() => (this.#warpState = "Decreasing"), 3000);
+      }
+    }, 3 * 1000);
   }
 
   draw() {
@@ -54,7 +63,7 @@ class StrandGrid {
   }
 
   move() {
-    this.#perlinNoise.noiseStep();
+    this.#perlinNoise.noiseStep(this.#warpState);
     this.strands.forEach((strand) =>
       strand.move([this.#perlinNoise.noiseEffect, stiffnessEffect])
     );
