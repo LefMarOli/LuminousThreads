@@ -9,7 +9,7 @@ class Strand {
   #fadePerc = 0.45;
   #colorSpeed;
   #minColorSpeed = 0.1;
-  #mode = "NoShow"; //Normal, Entering, Exiting, NoShow
+  #mode = "Normal"; //Normal, Entering, Exiting, NoShow
   #travelDirection = "Top"; //Top, Bottom
   #travelTrailSize = 40;
   #travelSpeed = 0.01;
@@ -47,7 +47,7 @@ class Strand {
   }
 
   draw() {
-    this.#switchMode();
+    //this.#switchMode();
     this.#updateTravel();
     this.#updateHue();
 
