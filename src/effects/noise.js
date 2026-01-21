@@ -16,12 +16,14 @@ class PerlinNoise {
   #speedRadians;
   #angle;
   #warpProgress = 0;
+  #fft
 
-  constructor(seed, loopTime) {
+  constructor(seed, loopTime, fft) {
     Simplex = new SimplexNoise(seed ?? Math.random);
 
     this.#speedRadians = TWO_PI / (loopTime * 1000);
     this.#angle = 0;
+    this.#fft = fft;
     R = loopTime / 25.0;
     z = 0;
     w = R;
@@ -39,7 +41,6 @@ class PerlinNoise {
       const next = sigmoid(this.#warpProgress);
       warpFactor -= current - next;
     }
-    //warpFactor = 1;
 
     this.#angle += this.#speedRadians * deltaTime;
     this.#angle %= TWO_PI;
