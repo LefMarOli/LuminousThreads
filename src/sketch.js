@@ -12,6 +12,7 @@ function setup() {
 function draw() {
   background(0, 0, 0);
   noiseSeed();
+  //noCursor();
 
   strandGrid.move();
   strandGrid.draw();

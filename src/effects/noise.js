@@ -10,6 +10,7 @@ const maxWarpFactor = 1.5;
 const minWarpFactor = 1.0;
 const warpDelay = 1 / 1000;
 let warpFactor = 1;
+let blip = 'Off';
 
 class PerlinNoise {
   #speedRadians;
@@ -38,6 +39,7 @@ class PerlinNoise {
       const next = sigmoid(this.#warpProgress);
       warpFactor -= current - next;
     }
+    //warpFactor = 1;
 
     this.#angle += this.#speedRadians * deltaTime;
     this.#angle %= TWO_PI;
@@ -48,10 +50,13 @@ class PerlinNoise {
   noiseEffect(strand, index) {
     const point = strand.pointsArray[index];
 
-    const x = point.x * noiseScaleX * warpFactor;
-    const y = point.y * noiseScaleY * warpFactor;
+    const x = point.x * noiseScaleX;
+    const y = point.y * noiseScaleY;
 
-    const noiseValue = Simplex.noise4D(x, y, z, w);
+    let az = z * warpFactor;
+    let aw = w * warpFactor;
+
+    const noiseValue = Simplex.noise4D(x, y, az, aw);
     return (noiseLevel * noiseValue) / 2.0;
   }
 }
