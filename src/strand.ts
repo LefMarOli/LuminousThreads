@@ -39,6 +39,7 @@ export class Strand {
   #probabilityPhaseShift = Math.PI / 2;
   #loopDuration: number;
   #loopTimestamp = 0;
+  #colorStopStride: number;
 
   constructor(
     pointsArray: Point[],
@@ -61,6 +62,21 @@ export class Strand {
     const travelSpeedFactor = (loopDuration * 90) / (50 * interpolationPoints);
     this.#travelSpeed =
       (loopDuration * interpolationPoints) / (travelSpeedFactor * 1000000);
+
+    // The gradient's color signal (hue drift + the fade envelope + the
+    // warp-driven brightness) is smooth and low-frequency - a stop every
+    // vertex (150 by default) massively oversamples it for what a linearly-
+    // interpolated CanvasGradient actually needs to look identical. Sampling
+    // at a fixed target stop count instead cuts addColorStop calls (and the
+    // color math/string-building behind each one - both measured as the
+    // biggest per-frame costs in this app) by ~85-90% with no visible
+    // banding, while the path itself (moveTo/lineTo below) still uses every
+    // vertex so the curve's shape stays fully smooth.
+    const targetColorStops = 20;
+    this.#colorStopStride = Math.max(
+      1,
+      Math.round((interpolationPoints - 1) / (targetColorStops - 1)),
+    );
 
     colorMode(HSB, 360, 100, 100, 1);
   }
@@ -111,21 +127,25 @@ export class Strand {
       const vertex = vertices[index];
       if (index === 0) ctx.moveTo(vertex.x, vertex.y);
       else ctx.lineTo(vertex.x, vertex.y);
+    }
 
-      const heightPerc = index / (this.#interpolationPoints - 1);
-      const [gradHue, gradAlpha] = this.#segmentHueAlpha(heightPerc);
-      const segmentBrightness =
-        100 *
-        this.#highlightFactor(vertex, vertex) *
-        this.#segmentBrightness(index);
-
-      glowGradient.addColorStop(
-        heightPerc,
-        hsbaToRgbaCss(gradHue, 100, segmentBrightness, gradAlpha * 0.3),
+    const lastIndex = this.#interpolationPoints - 1;
+    for (let index = 0; index <= lastIndex; index += this.#colorStopStride) {
+      this.#addGradientStops(
+        glowGradient,
+        sharpGradient,
+        vertices,
+        index,
+        lastIndex,
       );
-      sharpGradient.addColorStop(
-        heightPerc,
-        hsbaToRgbaCss(gradHue, 100, segmentBrightness, gradAlpha),
+    }
+    if (lastIndex % this.#colorStopStride !== 0) {
+      this.#addGradientStops(
+        glowGradient,
+        sharpGradient,
+        vertices,
+        lastIndex,
+        lastIndex,
       );
     }
 
@@ -196,6 +216,31 @@ export class Strand {
       default:
         return 1;
     }
+  }
+
+  #addGradientStops(
+    glowGradient: CanvasGradient,
+    sharpGradient: CanvasGradient,
+    vertices: Point[],
+    index: number,
+    lastIndex: number,
+  ): void {
+    const vertex = vertices[index];
+    const heightPerc = index / lastIndex;
+    const [gradHue, gradAlpha] = this.#segmentHueAlpha(heightPerc);
+    const segmentBrightness =
+      100 *
+      this.#highlightFactor(vertex, vertex) *
+      this.#segmentBrightness(index);
+
+    glowGradient.addColorStop(
+      heightPerc,
+      hsbaToRgbaCss(gradHue, 100, segmentBrightness, gradAlpha * 0.3),
+    );
+    sharpGradient.addColorStop(
+      heightPerc,
+      hsbaToRgbaCss(gradHue, 100, segmentBrightness, gradAlpha),
+    );
   }
 
   #highlightFactor(p1: Point, p2: Point): number {
