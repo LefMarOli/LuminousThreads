@@ -10,7 +10,7 @@ export class BeatDetector {
   }
 
   update(energyNorm: number): boolean {
-    let now = millis();
+    const now = millis();
 
     if (energyNorm > this.threshold && now - this.lastBeat > this.cooldown) {
       this.lastBeat = now;

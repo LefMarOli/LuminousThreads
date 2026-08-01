@@ -1,5 +1,3 @@
-import type p5 from "p5";
-
 export class FileAudioSource {
   sound: p5.SoundFile;
 

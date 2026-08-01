@@ -1,5 +1,3 @@
-import p5 from "p5";
-
 export class MicAudioSource {
   mic: p5.AudioIn;
 

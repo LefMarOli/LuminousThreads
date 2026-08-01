@@ -1,5 +1,3 @@
-import type p5 from "p5";
-
 export class StreamAudioSource {
   node: unknown;
 
@@ -8,6 +6,8 @@ export class StreamAudioSource {
   }
 
   connect(fft: p5.FFT): void {
+    // `.input` isn't part of p5.FFT's declared shape (see the ambient .d.ts comment).
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (fft as any).input = this.node;
   }
 

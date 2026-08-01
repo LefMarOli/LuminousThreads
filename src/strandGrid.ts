@@ -1,4 +1,3 @@
-import type p5 from "p5";
 import { Point } from "./point";
 import { Strand } from "./strand";
 import { PerlinNoise } from "./effects/noise";
@@ -14,6 +13,7 @@ export class StrandGrid {
   #perlinNoise: PerlinNoise;
   #warpState: "Increasing" | "Decreasing" = "Decreasing";
   #warpProbability = 0.5;
+  #warpIntervalId: ReturnType<typeof setInterval>;
 
   constructor(
     width: number,
@@ -22,7 +22,7 @@ export class StrandGrid {
     margin = 10,
     numPoints = 30,
     interpolationPoints = 150,
-    loopDuration = 50
+    loopDuration = 50,
   ) {
     colorMode(HSB, 360, 100, 100);
     this.startColor = color("#380ef3ff");
@@ -56,13 +56,13 @@ export class StrandGrid {
         interpolationPoints,
         startHue,
         endHue,
-        loopDuration
+        loopDuration,
       );
     }
 
     this.#perlinNoise = new PerlinNoise(17, loopDuration);
 
-    setInterval(() => {
+    this.#warpIntervalId = setInterval(() => {
       if (Math.random() < this.#warpProbability) {
         this.#warpState = "Increasing";
         setTimeout(() => (this.#warpState = "Decreasing"), 3000);
@@ -77,7 +77,14 @@ export class StrandGrid {
   move(): void {
     this.#perlinNoise.noiseStep(this.#warpState);
     this.strands.forEach((strand) =>
-      strand.move([this.#perlinNoise.noiseEffect, stiffnessEffect])
+      strand.move([this.#perlinNoise.noiseEffect, stiffnessEffect]),
     );
+  }
+
+  // Every window resize replaces the whole StrandGrid - without this, each
+  // discarded instance's interval keeps firing forever and keeps its entire
+  // strand/vertex graph alive via closure, leaking on every resize.
+  destroy(): void {
+    clearInterval(this.#warpIntervalId);
   }
 }
