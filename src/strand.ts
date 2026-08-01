@@ -73,54 +73,69 @@ export class Strand {
     if (this.#mode === "NoShow") return;
 
     push();
-    // p5's stroke()/strokeWeight()/line() each add their own colorMode and
-    // argument-handling overhead on top of the native canvas call - at
-    // ~7000 segments x 2 stroke passes/frame (default settings), that
-    // overhead alone measured ~90ms/frame. Drawing directly on the same
-    // underlying 2D context p5 itself uses (verified: identical pixel
-    // output, and correctly saved/restored by push()/pop() same as p5's
-    // own state) removes that per-call overhead without changing what's
-    // actually drawn.
+    // Drawing directly on the same underlying 2D context p5 itself uses
+    // (verified: identical pixel output, and correctly saved/restored by
+    // push()/pop() same as p5's own state) removes the overhead of p5's
+    // stroke()/strokeWeight()/line() wrappers on top of the native canvas
+    // call. Each vertex is stroked as part of ONE continuous path (with a
+    // gradient for the per-vertex color) rather than ~150 independent
+    // per-segment strokes - independent strokes that short (only a few
+    // pixels each) are barely longer than their own line width, so each
+    // one's anti-aliased edge doesn't blend seamlessly into its neighbor's,
+    // producing a periodic dim "seam" at every joint (confirmed directly:
+    // scanning real rendered pixel brightness along a strand showed a
+    // dip roughly every 3px, matching the per-segment spacing exactly). A
+    // single continuous path has no internal edges to blend across.
     const ctx = drawingContext as CanvasRenderingContext2D;
-    ctx.lineCap = "square";
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
 
-    for (let index = 1; index < this.#interpolationPoints; index++) {
-      // heightPerc must reach exactly 1 at the last segment (index ==
-      // interpolationPoints - 1) for the gradient to fully reach its end
-      // color there, matching how it fully reaches its start color at 0.
-      const heightPerc = (index - 1) / (this.#interpolationPoints - 2);
+    const vertices = this.#bezierCurve.vertices;
+    const first = vertices[0];
+    const last = vertices[this.#interpolationPoints - 1];
+    const glowGradient = ctx.createLinearGradient(
+      first.x,
+      first.y,
+      last.x,
+      last.y,
+    );
+    const sharpGradient = ctx.createLinearGradient(
+      first.x,
+      first.y,
+      last.x,
+      last.y,
+    );
+
+    ctx.beginPath();
+    for (let index = 0; index < this.#interpolationPoints; index++) {
+      const vertex = vertices[index];
+      if (index === 0) ctx.moveTo(vertex.x, vertex.y);
+      else ctx.lineTo(vertex.x, vertex.y);
+
+      const heightPerc = index / (this.#interpolationPoints - 1);
       const [gradHue, gradAlpha] = this.#segmentHueAlpha(heightPerc);
-
-      const p1 = this.#bezierCurve.vertices[index - 1];
-      const p2 = this.#bezierCurve.vertices[index];
-
       const segmentBrightness =
-        100 * this.#highlightFactor(p1, p2) * this.#segmentBrightness(index);
+        100 *
+        this.#highlightFactor(vertex, vertex) *
+        this.#segmentBrightness(index);
 
-      ctx.lineWidth = 6;
-      ctx.strokeStyle = hsbaToRgbaCss(
-        gradHue,
-        100,
-        segmentBrightness,
-        gradAlpha * 0.3,
+      glowGradient.addColorStop(
+        heightPerc,
+        hsbaToRgbaCss(gradHue, 100, segmentBrightness, gradAlpha * 0.3),
       );
-      ctx.beginPath();
-      ctx.moveTo(p1.x, p1.y);
-      ctx.lineTo(p2.x, p2.y);
-      ctx.stroke();
-
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = hsbaToRgbaCss(
-        gradHue,
-        100,
-        segmentBrightness,
-        gradAlpha,
+      sharpGradient.addColorStop(
+        heightPerc,
+        hsbaToRgbaCss(gradHue, 100, segmentBrightness, gradAlpha),
       );
-      ctx.beginPath();
-      ctx.moveTo(p1.x, p1.y);
-      ctx.lineTo(p2.x, p2.y);
-      ctx.stroke();
     }
+
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = glowGradient;
+    ctx.stroke();
+
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = sharpGradient;
+    ctx.stroke();
 
     pop();
   }
