@@ -70,8 +70,10 @@ export class StrandGrid {
     }, 3 * 1000);
   }
 
-  draw(): void {
-    this.strands.forEach((strand) => strand.draw());
+  // Per-strand CPU state update (mode/travel/hue) - the WebGL renderer
+  // reads vertices/getVertexColor() directly, it doesn't call this itself.
+  update(): void {
+    this.strands.forEach((strand) => strand.update());
   }
 
   move(): void {

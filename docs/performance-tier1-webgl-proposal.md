@@ -2,8 +2,28 @@
 
 ## Status
 
-Not started. This document records the current measurement and the
-reasoning behind whether it's worth doing — implementation has not begun.
+**Implemented.** Rendering was ported to WebGL2 (`src/gl/`) - not purely
+for the performance reasons this doc originally scoped, but primarily to
+fix a correctness problem the Canvas2D trail-effect experiments ran into
+(percentage-based fade left a persistent residual tint; a linear-decay
+workaround via `'difference'` blending caused a real 30Hz flicker; true
+per-pixel clamped decay on the CPU cost ~15.7ms/frame, more than the whole
+60fps budget). A float/half-float ping-pong framebuffer solves this
+properly - the decay is a single cheap GPU shader pass with real
+precision, no CPU readback, no reflection artifact. See the
+implementation plan for the full design (mesh tessellation, shader-based
+continuous glow, feedback buffer).
+
+Measured result (94 strands, 1728×1080, same method as below): frame time
+with the full feedback-buffer trail active is ~12.955ms, versus this
+doc's ~13.2ms Canvas2D baseline - roughly on par, now with a fully
+correct, artifact-free trail effect the old renderer could never
+produce. Without the trail (comparable to what this doc's "Tier 1" scope
+originally covered), it measured ~10.5ms, in line with the ~15-25%
+estimate below.
+
+The rest of this document is kept as-is for historical context - the
+original measurement and reasoning that led to the decision to build this.
 
 **Update:** a cheaper, lower-risk fix (gradient color-stop sampling —
 see below) landed first and shrank the addressable baseline
