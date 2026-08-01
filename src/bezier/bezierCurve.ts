@@ -31,7 +31,10 @@ export class BezierCurve {
     if (interpolationPoints <= 2)
       throw new Error("Need at least 2 interpolation points.");
 
-    this.#controlPoints = controlPoints;
+    // Copied (not aliased) so this doesn't silently track whatever the
+    // caller's array holds later - matters here because StrandGrid passes
+    // the same shared, mutated-in-place array while building each Strand.
+    this.#controlPoints = controlPoints.map((p) => new Point(p.x, p.y));
     this.interpolationPoints = interpolationPoints;
 
     this.#_initVertexList();
@@ -52,11 +55,8 @@ export class BezierCurve {
   }
 
   #_buildVertices(): void {
-    let t;
     let coefficient;
     for (let index = 0; index < this.interpolationPoints; index++) {
-      t = index * this.#increment;
-
       this.vertices[index].x = 0;
       this.vertices[index].y = 0;
 

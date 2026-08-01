@@ -27,38 +27,17 @@ Better rank ordering method by Stefan Gustavson in 2012.
  SOFTWARE.
  */
 
-const F2 = 0.5 * (Math.sqrt(3.0) - 1.0);
-const G2 = (3.0 - Math.sqrt(3.0)) / 6.0;
-const F3 = 1.0 / 3.0;
-const G3 = 1.0 / 6.0;
 const F4 = (Math.sqrt(5.0) - 1.0) / 4.0;
 const G4 = (5.0 - Math.sqrt(5.0)) / 20.0;
 
-const grad3 = new Float32Array([1, 1, 0,
-  -1, 1, 0,
-  1, -1, 0,
-
-  -1, -1, 0,
-  1, 0, 1,
-  -1, 0, 1,
-
-  1, 0, -1,
-  -1, 0, -1,
-  0, 1, 1,
-
-  0, -1, 1,
-  0, 1, -1,
-  0, -1, -1]);
-
-const grad4 = new Float32Array([0, 1, 1, 1, 0, 1, 1, -1, 0, 1, -1, 1, 0, 1, -1, -1,
-  0, -1, 1, 1, 0, -1, 1, -1, 0, -1, -1, 1, 0, -1, -1, -1,
-  1, 0, 1, 1, 1, 0, 1, -1, 1, 0, -1, 1, 1, 0, -1, -1,
-  -1, 0, 1, 1, -1, 0, 1, -1, -1, 0, -1, 1, -1, 0, -1, -1,
-  1, 1, 0, 1, 1, 1, 0, -1, 1, -1, 0, 1, 1, -1, 0, -1,
-  -1, 1, 0, 1, -1, 1, 0, -1, -1, -1, 0, 1, -1, -1, 0, -1,
-  1, 1, 1, 0, 1, 1, -1, 0, 1, -1, 1, 0, 1, -1, -1, 0,
-  -1, 1, 1, 0, -1, 1, -1, 0, -1, -1, 1, 0, -1, -1, -1, 0]);
-
+const grad4 = new Float32Array([
+  0, 1, 1, 1, 0, 1, 1, -1, 0, 1, -1, 1, 0, 1, -1, -1, 0, -1, 1, 1, 0, -1, 1, -1,
+  0, -1, -1, 1, 0, -1, -1, -1, 1, 0, 1, 1, 1, 0, 1, -1, 1, 0, -1, 1, 1, 0, -1,
+  -1, -1, 0, 1, 1, -1, 0, 1, -1, -1, 0, -1, 1, -1, 0, -1, -1, 1, 1, 0, 1, 1, 1,
+  0, -1, 1, -1, 0, 1, 1, -1, 0, -1, -1, 1, 0, 1, -1, 1, 0, -1, -1, -1, 0, 1, -1,
+  -1, 0, -1, 1, 1, 1, 0, 1, 1, -1, 0, 1, -1, 1, 0, 1, -1, -1, 0, -1, 1, 1, 0,
+  -1, 1, -1, 0, -1, -1, 1, 0, -1, -1, -1, 0,
+]);
 
 /** Deterministic simplex noise generator suitable for 2D, 3D and 4D spaces. */
 export class SimplexNoise {
@@ -72,7 +51,8 @@ export class SimplexNoise {
    * Defaults to Math.random (random irreproducible initialization).
    */
   constructor(randomOrSeed: (() => number) | string | number = Math.random) {
-    const random = typeof randomOrSeed == 'function' ? randomOrSeed : alea(randomOrSeed);
+    const random =
+      typeof randomOrSeed == "function" ? randomOrSeed : alea(randomOrSeed);
     this.#p = buildPermutationTable(random);
     this.#perm = new Uint8Array(512);
     this.#permMod12 = new Uint8Array(512);
@@ -81,7 +61,6 @@ export class SimplexNoise {
       this.#permMod12[i] = this.#perm[i] % 12;
     }
   }
-
 
   /**
    * Samples the noise field in 4 dimensions
@@ -181,35 +160,72 @@ export class SimplexNoise {
     else {
       const gi0 = (perm[ii + perm[jj + perm[kk + perm[ll]]]] % 32) * 4;
       t0 *= t0;
-      n0 = t0 * t0 * (grad4[gi0] * x0 + grad4[gi0 + 1] * y0 + grad4[gi0 + 2] * z0 + grad4[gi0 + 3] * w0);
+      n0 =
+        t0 *
+        t0 *
+        (grad4[gi0] * x0 +
+          grad4[gi0 + 1] * y0 +
+          grad4[gi0 + 2] * z0 +
+          grad4[gi0 + 3] * w0);
     }
     let t1 = 0.6 - x1 * x1 - y1 * y1 - z1 * z1 - w1 * w1;
     if (t1 < 0) n1 = 0.0;
     else {
-      const gi1 = (perm[ii + i1 + perm[jj + j1 + perm[kk + k1 + perm[ll + l1]]]] % 32) * 4;
+      const gi1 =
+        (perm[ii + i1 + perm[jj + j1 + perm[kk + k1 + perm[ll + l1]]]] % 32) *
+        4;
       t1 *= t1;
-      n1 = t1 * t1 * (grad4[gi1] * x1 + grad4[gi1 + 1] * y1 + grad4[gi1 + 2] * z1 + grad4[gi1 + 3] * w1);
+      n1 =
+        t1 *
+        t1 *
+        (grad4[gi1] * x1 +
+          grad4[gi1 + 1] * y1 +
+          grad4[gi1 + 2] * z1 +
+          grad4[gi1 + 3] * w1);
     }
     let t2 = 0.6 - x2 * x2 - y2 * y2 - z2 * z2 - w2 * w2;
     if (t2 < 0) n2 = 0.0;
     else {
-      const gi2 = (perm[ii + i2 + perm[jj + j2 + perm[kk + k2 + perm[ll + l2]]]] % 32) * 4;
+      const gi2 =
+        (perm[ii + i2 + perm[jj + j2 + perm[kk + k2 + perm[ll + l2]]]] % 32) *
+        4;
       t2 *= t2;
-      n2 = t2 * t2 * (grad4[gi2] * x2 + grad4[gi2 + 1] * y2 + grad4[gi2 + 2] * z2 + grad4[gi2 + 3] * w2);
+      n2 =
+        t2 *
+        t2 *
+        (grad4[gi2] * x2 +
+          grad4[gi2 + 1] * y2 +
+          grad4[gi2 + 2] * z2 +
+          grad4[gi2 + 3] * w2);
     }
     let t3 = 0.6 - x3 * x3 - y3 * y3 - z3 * z3 - w3 * w3;
     if (t3 < 0) n3 = 0.0;
     else {
-      const gi3 = (perm[ii + i3 + perm[jj + j3 + perm[kk + k3 + perm[ll + l3]]]] % 32) * 4;
+      const gi3 =
+        (perm[ii + i3 + perm[jj + j3 + perm[kk + k3 + perm[ll + l3]]]] % 32) *
+        4;
       t3 *= t3;
-      n3 = t3 * t3 * (grad4[gi3] * x3 + grad4[gi3 + 1] * y3 + grad4[gi3 + 2] * z3 + grad4[gi3 + 3] * w3);
+      n3 =
+        t3 *
+        t3 *
+        (grad4[gi3] * x3 +
+          grad4[gi3 + 1] * y3 +
+          grad4[gi3 + 2] * z3 +
+          grad4[gi3 + 3] * w3);
     }
     let t4 = 0.6 - x4 * x4 - y4 * y4 - z4 * z4 - w4 * w4;
     if (t4 < 0) n4 = 0.0;
     else {
-      const gi4 = (perm[ii + 1 + perm[jj + 1 + perm[kk + 1 + perm[ll + 1]]]] % 32) * 4;
+      const gi4 =
+        (perm[ii + 1 + perm[jj + 1 + perm[kk + 1 + perm[ll + 1]]]] % 32) * 4;
       t4 *= t4;
-      n4 = t4 * t4 * (grad4[gi4] * x4 + grad4[gi4 + 1] * y4 + grad4[gi4 + 2] * z4 + grad4[gi4 + 3] * w4);
+      n4 =
+        t4 *
+        t4 *
+        (grad4[gi4] * x4 +
+          grad4[gi4 + 1] * y4 +
+          grad4[gi4 + 2] * z4 +
+          grad4[gi4 + 3] * w4);
     }
     // Sum up and scale the result to cover the range [-1,1]
     return 27.0 * (n0 + n1 + n2 + n3 + n4);
@@ -248,9 +264,9 @@ function alea(seed: string | number): () => number {
   let c = 1;
 
   const mash = masher();
-  s0 = mash(' ');
-  s1 = mash(' ');
-  s2 = mash(' ');
+  s0 = mash(" ");
+  s1 = mash(" ");
+  s2 = mash(" ");
 
   s0 -= mash(seed);
   if (s0 < 0) {
@@ -265,17 +281,17 @@ function alea(seed: string | number): () => number {
     s2 += 1;
   }
 
-  return function() {
+  return function () {
     const t = 2091639 * s0 + c * 2.3283064365386963e-10; // 2^-32
     s0 = s1;
     s1 = s2;
-    return s2 = t - (c = t | 0);
+    return (s2 = t - (c = t | 0));
   };
 }
 
 function masher(): (data: string | number) => number {
   let n = 0xefc8249d;
-  return function(data: string | number) {
+  return function (data: string | number) {
     const str = data.toString();
     for (let i = 0; i < str.length; i++) {
       n += str.charCodeAt(i);

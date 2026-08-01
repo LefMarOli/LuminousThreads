@@ -15,23 +15,23 @@ import { AudioAnalysis } from "./audio/audioAnalyzer";
 //  3. `new p5()` with no sketch function is what actually makes p5 enter
 //     global mode - that's what attaches createCanvas/background/etc. to
 //     `window` and makes p5 start looking for window.setup/draw itself.
+// p5's own types declare `Window.p5` as a p5 *instance*, but global-mode
+// bootstrapping needs the constructor there (p5.FFT/p5.AudioIn etc. are
+// static members of the constructor) - narrow escape hatch for that gap.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 (window as any).p5 = p5;
-await import("p5/lib/addons/p5.sound");
+await import("p5.sound");
 
-// @types/p5 declares disableFriendlyErrors as an instance property, but p5's
-// real runtime API sets it directly on the constructor - narrow escape hatch
-// for that types-package gap, not a real `any`.
-(p5 as any).disableFriendlyErrors = true; // disables FES
+p5.disableFriendlyErrors = true; // disables FES
 
 let strandGrid!: StrandGrid;
-let canvas!: p5.Renderer;
 let source!: MicAudioSource | FileAudioSource;
 let audioAnalyzer!: AudioAnalysis;
 let maxVal = 0;
 
 function setup(): void {
   frameRate(60);
-  canvas = createCanvas(window.outerWidth, window.outerHeight);
+  createCanvas(window.outerWidth, window.outerHeight);
   strandGrid = new StrandGrid(window.outerWidth, window.outerHeight);
 
   userStartAudio();
@@ -47,7 +47,7 @@ function draw(): void {
   background(0, 0, 0);
   audioAnalyzer.update();
   // @ts-expect-error - real p5 accepts calling this with no seed (re-seeds
-  // randomly); @types/p5 requires an argument that isn't actually mandatory.
+  // randomly); p5's own types require an argument that isn't actually mandatory.
   noiseSeed();
   //noCursor();
 
@@ -64,12 +64,13 @@ function draw(): void {
 
 function windowResized(): void {
   resizeCanvas(window.outerWidth, window.outerHeight);
+  strandGrid.destroy();
   strandGrid = new StrandGrid(window.outerWidth, window.outerHeight);
 }
 
 function keyPressed(): void {
   if (key === "f") {
-    let fs = fullscreen();
+    const fs = fullscreen();
     fullscreen(!fs);
   }
 }
@@ -82,6 +83,4 @@ Object.assign(window, { setup, draw, windowResized, keyPressed });
 
 // Must run after the assignment above: this is what makes p5 actually enter
 // global mode and look for window.setup/draw (see the comment near the top).
-// @types/p5's constructor type requires a sketch function, but the real
-// runtime constructor treats a no-argument call as "run in global mode".
-new (p5 as any)();
+new p5();

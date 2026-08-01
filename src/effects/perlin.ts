@@ -1,4 +1,4 @@
-let perm = createxorperm(256);
+const perm = createxorperm(256);
 
 function xorshift32(x: number): number {
   x *= 7;
@@ -10,7 +10,7 @@ function xorshift32(x: number): number {
 }
 
 function createxorperm(size: number): Uint8Array {
-  let p = new Uint8Array(size * 2);
+  const p = new Uint8Array(size * 2);
   for (let i = 0; i < p.length; ++i) {
     p[i] = xorshift32(i);
   }
@@ -25,11 +25,11 @@ export function fractalPerlinNoise4d(
   octaveCount = 4,
   persistence = 0.5,
   scaleFactor = 2,
-  offset = 0.618
+  offset = 0.618,
 ): number {
   let noiseSum = perlinNoise4d(x, y, z, w);
   let maxValue = 1;
-  let iSF = 1 / scaleFactor;
+  const iSF = 1 / scaleFactor;
   let currentScaleFactor = scaleFactor;
   let currentPersistence = persistence;
   while (octaveCount > 1) {
@@ -38,7 +38,7 @@ export function fractalPerlinNoise4d(
         x * currentScaleFactor + offset,
         y * currentScaleFactor + offset,
         z * currentScaleFactor + offset,
-        w * currentScaleFactor + offset
+        w * currentScaleFactor + offset,
       ) * currentPersistence;
     maxValue += currentPersistence;
     currentScaleFactor *= scaleFactor;
@@ -52,41 +52,41 @@ export function fractalPerlinNoise4d(
 
 export function perlinNoise4d(w: number, x = 0, y = 0, z = 0): number {
   let ww = Math.floor(w);
-  let w0 = w - ww;
-  let w1 = w0 - 1;
+  const w0 = w - ww;
+  const w1 = w0 - 1;
   ww &= 255;
 
   let xw = Math.floor(x);
-  let x0 = x - xw;
-  let x1 = x0 - 1;
+  const x0 = x - xw;
+  const x1 = x0 - 1;
   xw &= 255;
 
   let yw = Math.floor(y);
-  let y0 = y - yw;
-  let y1 = y0 - 1;
+  const y0 = y - yw;
+  const y1 = y0 - 1;
   yw &= 255;
 
   let zw = Math.floor(z);
-  let z0 = z - zw;
-  let z1 = z0 - 1;
+  const z0 = z - zw;
+  const z1 = z0 - 1;
   zw &= 255;
 
-  let r0 = perm[ww] + xw;
-  let r1 = perm[ww + 1] + xw;
+  const r0 = perm[ww] + xw;
+  const r1 = perm[ww + 1] + xw;
 
-  let r00 = perm[r0] + yw;
-  let r10 = perm[r1] + yw;
-  let r01 = perm[r0 + 1] + yw;
-  let r11 = perm[r1 + 1] + yw;
+  const r00 = perm[r0] + yw;
+  const r10 = perm[r1] + yw;
+  const r01 = perm[r0 + 1] + yw;
+  const r11 = perm[r1 + 1] + yw;
 
-  let r000 = perm[r00] + zw;
-  let r100 = perm[r10] + zw;
-  let r010 = perm[r01] + zw;
-  let r110 = perm[r11] + zw;
-  let r001 = perm[r00 + 1] + zw;
-  let r101 = perm[r10 + 1] + zw;
-  let r011 = perm[r01 + 1] + zw;
-  let r111 = perm[r11 + 1] + zw;
+  const r000 = perm[r00] + zw;
+  const r100 = perm[r10] + zw;
+  const r010 = perm[r01] + zw;
+  const r110 = perm[r11] + zw;
+  const r001 = perm[r00 + 1] + zw;
+  const r101 = perm[r10 + 1] + zw;
+  const r011 = perm[r01 + 1] + zw;
+  const r111 = perm[r11 + 1] + zw;
 
   let a = perm[r000];
   let b = perm[r100];
@@ -417,36 +417,36 @@ export function perlinNoise4d(w: number, x = 0, y = 0, z = 0): number {
   y = fadeQuintic(y0);
   z = fadeQuintic(z0);
 
-  let wx = w*x;
-  let wy = w*y;
-  let wz = w*z;
-  let xy = x*y;
-  let xz = x*z;
-  let yz = y*z;
-  let wxy = wx*y;
-  let wxz = wx*z;
-  let wyz = wy*z;
-  let xyz = xy*z;
-  let wxyz = w*xyz;
+  const wx = w*x;
+  const wy = w*y;
+  const wz = w*z;
+  const xy = x*y;
+  const xz = x*z;
+  const yz = y*z;
+  const wxy = wx*y;
+  const wxz = wx*z;
+  const wyz = wy*z;
+  const xyz = xy*z;
+  const wxyz = w*xyz;
 
-  let k00 = a;
-  let k01 = (-a+b);
-  let k02 = (-a  +c);
-  let k03 = (-a      +e);
-  let k04 = (-a              +i);
-  let k05 = (-k01-c+d);
-  let k06 = (-k01    -e+f);
-  let k07 = (-k01            -i+j);
-  let k08 = (-k02    -e  +g);
-  let k09 = (-k02            -i  +k);
-  let k10 = (-k03            -i      +m);
-  let k11 = (-k05    +e-f-g+h);
-  let k12 = (-k05            +i-j-k+l);
-  let k13 = (-k06            +i-j    -m+n);
-  let k14 = (-k08            +i  -k  -m  +o);
-  let k15 = (-k11            -i+j+k-l+m-n-o+p);
+  const k00 = a;
+  const k01 = (-a+b);
+  const k02 = (-a  +c);
+  const k03 = (-a      +e);
+  const k04 = (-a              +i);
+  const k05 = (-k01-c+d);
+  const k06 = (-k01    -e+f);
+  const k07 = (-k01            -i+j);
+  const k08 = (-k02    -e  +g);
+  const k09 = (-k02            -i  +k);
+  const k10 = (-k03            -i      +m);
+  const k11 = (-k05    +e-f-g+h);
+  const k12 = (-k05            +i-j-k+l);
+  const k13 = (-k06            +i-j    -m+n);
+  const k14 = (-k08            +i  -k  -m  +o);
+  const k15 = (-k11            -i+j+k-l+m-n-o+p);
 
-  let result = k00     + k01*w   + k02*x   + k03*y   + k04*z
+  const result = k00     + k01*w   + k02*x   + k03*y   + k04*z
              + k05*wx  + k06*wy  + k07*wz  + k08*xy  + k09*xz  + k10*yz
              + k11*wxy + k12*wxz + k13*wyz + k14*xyz + k15*wxyz
 
@@ -459,16 +459,6 @@ export function perlinNoise4d(w: number, x = 0, y = 0, z = 0): number {
   // doesn't typecheck. Nothing calls this function at all currently either way.
 }
 
-function fadeCubic(t: number): number {
-  return t * t * (-2 * t + 3);
-}
-function dFadeCubic(t: number): number {
-  return t * (6 - 6 * t);
-}
-
 function fadeQuintic(t: number): number {
   return t * t * t * (t * (t * 6 - 15) + 10);
-}
-function dFadeQuintic(t: number): number {
-  return t * t * (t * (30 * t - 60) + 30);
 }

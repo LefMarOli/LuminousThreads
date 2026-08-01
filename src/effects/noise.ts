@@ -14,7 +14,6 @@ const maxWarpFactor = 1.5;
 const minWarpFactor = 1.0;
 const warpDelay = 1 / 1000;
 let warpFactor: number = 1;
-let blip: string = 'Off';
 
 export class PerlinNoise {
   #speedRadians: number;
@@ -58,8 +57,8 @@ export class PerlinNoise {
     const x = point.x * noiseScaleX;
     const y = point.y * noiseScaleY;
 
-    let az = z * warpFactor;
-    let aw = w * warpFactor;
+    const az = z * warpFactor;
+    const aw = w * warpFactor;
 
     const noiseValue = Simplex.noise4D(x, y, az, aw);
     return (noiseLevel * noiseValue) / 2.0;
