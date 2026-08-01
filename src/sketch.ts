@@ -55,7 +55,7 @@ function setup(): void {
 }
 
 function draw(): void {
-  background(0, 0, 0);
+  background(0, 0, 0, 0.08);
 
   if (audioAnalyzer) {
     audioAnalyzer.update();
@@ -87,6 +87,7 @@ function keyPressed(): void {
   if (key === "f") {
     const fs = fullscreen();
     fullscreen(!fs);
+    windowResized();
   }
 }
 

@@ -82,7 +82,7 @@ export class Strand {
   }
 
   draw(): void {
-    //this.#switchMode();
+    this.#switchMode();
     this.#updateTravel();
     this.#updateHue();
 
@@ -116,10 +116,10 @@ export class Strand {
       last.y,
     );
     const midGradient = ctx.createLinearGradient(
-        first.x,
-        first.y,
-        last.x,
-        last.y,
+      first.x,
+      first.y,
+      last.x,
+      last.y,
     );
     const sharpGradient = ctx.createLinearGradient(
       first.x,
@@ -157,13 +157,13 @@ export class Strand {
       );
     }
 
-    ctx.lineWidth = 7;
-    ctx.strokeStyle = glowGradient;
-    ctx.stroke();
-
     ctx.lineWidth = 5;
+    ctx.strokeStyle = glowGradient;
+    //ctx.stroke();
+
+    ctx.lineWidth = 3;
     ctx.strokeStyle = midGradient;
-    ctx.stroke();
+    //ctx.stroke();
 
     ctx.lineWidth = 2;
     ctx.strokeStyle = sharpGradient;
@@ -248,11 +248,11 @@ export class Strand {
 
     glowGradient.addColorStop(
       heightPerc,
-      hsbaToRgbaCss(gradHue, 100, segmentBrightness, gradAlpha * 0.4),
+      hsbaToRgbaCss(gradHue, 100, segmentBrightness, gradAlpha * 0.3),
     );
     midGradient.addColorStop(
-        heightPerc,
-        hsbaToRgbaCss(gradHue, 100, segmentBrightness, gradAlpha * 0.6),
+      heightPerc,
+      hsbaToRgbaCss(gradHue, 100, segmentBrightness, gradAlpha * 0.6),
     );
     sharpGradient.addColorStop(
       heightPerc,
