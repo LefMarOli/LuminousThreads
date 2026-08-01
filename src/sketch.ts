@@ -4,6 +4,8 @@ import { StrandGrid } from "./strandGrid";
 import { MicAudioSource } from "./audio/input/micAudioSource";
 import { FileAudioSource } from "./audio/input/fileAudioSource";
 import { AudioAnalysis } from "./audio/audioAnalyzer";
+import { acquireGlContext } from "./gl/glContext";
+import { Renderer } from "./gl/renderer";
 
 // Sound-reactive visuals aren't actually wired into any rendering yet -
 // AudioAnalysis's output below only ever gets console.logged. Turned off
@@ -37,11 +39,36 @@ let strandGrid!: StrandGrid;
 let source: MicAudioSource | FileAudioSource | undefined;
 let audioAnalyzer: AudioAnalysis | undefined;
 let maxVal = 0;
+let gl!: WebGL2RenderingContext;
+let renderer!: Renderer;
 
 function setup(): void {
   frameRate(60);
-  createCanvas(window.outerWidth, window.outerHeight);
+  createCanvas(window.outerWidth, window.outerHeight, WEBGL);
   strandGrid = new StrandGrid(window.outerWidth, window.outerHeight);
+
+  // Stage 0 of the WebGL port (see the plan doc): grab the raw context and
+  // bypass p5's own WEBGL-mode 3D drawing API entirely - box()/sphere()/its
+  // camera are never used, this is the same "escape hatch to the real
+  // context" pattern strand.ts already used for Canvas2D.
+  const { gl: acquiredGl, capabilities } = acquireGlContext();
+  gl = acquiredGl;
+
+  // The projection matrix must map the same coordinate space strand
+  // vertices are authored in - window.outerWidth/outerHeight (CSS pixels),
+  // matching StrandGrid/BezierCurve/Point - not gl.drawingBufferWidth/Height
+  // (confirmed in Stage 0 to differ under a non-1:1 pixelDensity: passing
+  // the drawing-buffer size here compressed the whole scene into a quarter
+  // of the canvas, since vertex positions only span the smaller CSS range).
+  // The viewport itself is still set to the full drawing-buffer resolution
+  // (in Renderer.render()) so rendering stays sharp on high-DPI displays.
+  renderer = new Renderer(
+    gl,
+    window.outerWidth,
+    window.outerHeight,
+    strandGrid,
+    capabilities.hasFloatColorBuffer,
+  );
 
   if (AUDIO_ENABLED) {
     userStartAudio();
@@ -55,8 +82,6 @@ function setup(): void {
 }
 
 function draw(): void {
-  background(0, 0, 0, 0.08);
-
   if (audioAnalyzer) {
     audioAnalyzer.update();
 
@@ -74,13 +99,15 @@ function draw(): void {
   //noCursor();
 
   strandGrid.move();
-  strandGrid.draw();
+  strandGrid.update();
+  renderer.render(strandGrid);
 }
 
 function windowResized(): void {
   resizeCanvas(window.outerWidth, window.outerHeight);
   strandGrid.destroy();
   strandGrid = new StrandGrid(window.outerWidth, window.outerHeight);
+  renderer.resize(window.outerWidth, window.outerHeight, strandGrid);
 }
 
 function keyPressed(): void {
@@ -88,6 +115,8 @@ function keyPressed(): void {
     const fs = fullscreen();
     fullscreen(!fs);
     windowResized();
+  } else if (key === "w") {
+    renderer.toggleWireframe();
   }
 }
 
