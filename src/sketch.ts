@@ -5,6 +5,13 @@ import { MicAudioSource } from "./audio/input/micAudioSource";
 import { FileAudioSource } from "./audio/input/fileAudioSource";
 import { AudioAnalysis } from "./audio/audioAnalyzer";
 
+// Sound-reactive visuals aren't actually wired into any rendering yet -
+// AudioAnalysis's output below only ever gets console.logged. Turned off
+// while focusing on visual work: running the full audio pipeline (mic
+// permission prompt, FFT, loading Tone.js) has its own real cost and isn't
+// needed for that right now. Flip back to true to re-enable.
+const AUDIO_ENABLED = false;
+
 // Importing p5 as a real ES module (rather than loading the browser <script>
 // build) skips p5's own "no module system detected, auto-bootstrap global
 // mode" trick, so it has to be done by hand here:
@@ -15,18 +22,20 @@ import { AudioAnalysis } from "./audio/audioAnalyzer";
 //  3. `new p5()` with no sketch function is what actually makes p5 enter
 //     global mode - that's what attaches createCanvas/background/etc. to
 //     `window` and makes p5 start looking for window.setup/draw itself.
-// p5's own types declare `Window.p5` as a p5 *instance*, but global-mode
-// bootstrapping needs the constructor there (p5.FFT/p5.AudioIn etc. are
-// static members of the constructor) - narrow escape hatch for that gap.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-(window as any).p5 = p5;
-await import("p5.sound");
+if (AUDIO_ENABLED) {
+  // p5's own types declare `Window.p5` as a p5 *instance*, but global-mode
+  // bootstrapping needs the constructor there (p5.FFT/p5.AudioIn etc. are
+  // static members of the constructor) - narrow escape hatch for that gap.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (window as any).p5 = p5;
+  await import("p5.sound");
+}
 
 p5.disableFriendlyErrors = true; // disables FES
 
 let strandGrid!: StrandGrid;
-let source!: MicAudioSource | FileAudioSource;
-let audioAnalyzer!: AudioAnalysis;
+let source: MicAudioSource | FileAudioSource | undefined;
+let audioAnalyzer: AudioAnalysis | undefined;
 let maxVal = 0;
 
 function setup(): void {
@@ -34,18 +43,31 @@ function setup(): void {
   createCanvas(window.outerWidth, window.outerHeight);
   strandGrid = new StrandGrid(window.outerWidth, window.outerHeight);
 
-  userStartAudio();
+  if (AUDIO_ENABLED) {
+    userStartAudio();
 
-  source = new MicAudioSource();
-  // source = new FileAudioSource("music.mp3");
+    source = new MicAudioSource();
+    // source = new FileAudioSource("music.mp3");
 
-  audioAnalyzer = new AudioAnalysis(source);
-  audioAnalyzer.start();
+    audioAnalyzer = new AudioAnalysis(source);
+    audioAnalyzer.start();
+  }
 }
 
 function draw(): void {
   background(0, 0, 0);
-  audioAnalyzer.update();
+
+  if (audioAnalyzer) {
+    audioAnalyzer.update();
+
+    if (audioAnalyzer.bass > maxVal) {
+      maxVal = audioAnalyzer.bass;
+      console.log(maxVal);
+    }
+
+    if (audioAnalyzer.beat) console.log("beat");
+  }
+
   // @ts-expect-error - real p5 accepts calling this with no seed (re-seeds
   // randomly); p5's own types require an argument that isn't actually mandatory.
   noiseSeed();
@@ -53,13 +75,6 @@ function draw(): void {
 
   strandGrid.move();
   strandGrid.draw();
-
-  if (audioAnalyzer.bass > maxVal) {
-    maxVal = audioAnalyzer.bass;
-    console.log(maxVal);
-  }
-
-  if (audioAnalyzer.beat) console.log("beat");
 }
 
 function windowResized(): void {
