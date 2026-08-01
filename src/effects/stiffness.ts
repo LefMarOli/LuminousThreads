@@ -1,4 +1,6 @@
-function stiffnessEffect(strand, index) {
+import type { Strand } from "../strand";
+
+export function stiffnessEffect(strand: Strand, index: number): number {
   const x = strand.pointsArray[index].x;
   const xinit = strand.initArray[index].x;
 

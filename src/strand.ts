@@ -1,32 +1,35 @@
-class Strand {
-  pointsArray;
-  initArray;
-  initX;
-  #bezierCurve;
-  #interpolationPoints;
-  #startHue;
-  #endHue;
+import { Point } from "./point";
+import { BezierCurve } from "./bezier/bezierCurve";
+
+export class Strand {
+  pointsArray: Point[];
+  initArray: Point[];
+  initX: number;
+  #bezierCurve: BezierCurve;
+  #interpolationPoints: number;
+  #startHue: number;
+  #endHue: number;
   #fadePerc = 0.45;
-  #colorSpeed;
+  #colorSpeed: number;
   #minColorSpeed = 0.1;
-  #mode = "Normal"; //Normal, Entering, Exiting, NoShow
-  #travelDirection = "Top"; //Top, Bottom
+  #mode: "Normal" | "Entering" | "Exiting" | "NoShow" = "Normal";
+  #travelDirection: "Top" | "Bottom" = "Top";
   #travelTrailSize = 40;
   #travelSpeed = 0.01;
-  #travelPos;
+  #travelPos!: number;
   #peakProbability = 0.01;
   #enteringProbability = this.#peakProbability;
   #exitingProbability = 0;
   #probabilityPhaseShift = Math.PI / 2;
-  #loopDuration;
+  #loopDuration: number;
   #loopTimestamp = 0;
 
   constructor(
-    pointsArray,
-    interpolationPoints,
-    startHue,
-    endHue,
-    loopDuration
+    pointsArray: Point[],
+    interpolationPoints: number,
+    startHue: number,
+    endHue: number,
+    loopDuration: number
   ) {
     this.pointsArray = pointsArray.map((p) => new Point(p.x, p.y));
     this.initArray = pointsArray.map((p) => new Point(p.x, p.y));
@@ -46,7 +49,7 @@ class Strand {
     colorMode(HSB, 360, 100, 100, 1);
   }
 
-  draw() {
+  draw(): void {
     //this.#switchMode();
     this.#updateTravel();
     this.#updateHue();
@@ -92,14 +95,14 @@ class Strand {
     pop();
   }
 
-  #updateHue() {
+  #updateHue(): void {
     this.#startHue += this.#colorSpeed * deltaTime;
     this.#startHue %= 360;
     this.#endHue += this.#colorSpeed * deltaTime;
     this.#endHue %= 360;
   }
 
-  #updateTravel() {
+  #updateTravel(): void {
     this.#loopTimestamp += deltaTime;
     this.#loopTimestamp %= this.#loopDuration;
 
@@ -123,7 +126,7 @@ class Strand {
     }
   }
 
-  #segmentBrightness(index) {
+  #segmentBrightness(index: number): number {
     switch (this.#mode) {
       case "NoShow":
         return 0;
@@ -150,13 +153,13 @@ class Strand {
     }
   }
 
-  #highlightFactor(p1, p2) {
+  #highlightFactor(p1: Point, p2: Point): number {
     const middleX = (p1.x + p2.x) / 2.0;
     const fa = 1.0 / Math.pow(Math.abs(this.initX - middleX), 1 / 9);
     return fa;
   }
 
-  #segmentColor(heightPerc) {
+  #segmentColor(heightPerc: number) {
     let startColor;
     if (heightPerc < this.#fadePerc)
       startColor = color(this.#startHue, 100, 100, heightPerc / this.#fadePerc);
@@ -175,7 +178,7 @@ class Strand {
     return lerpColor(startColor, endColor, heightPerc);
   }
 
-  #switchMode() {
+  #switchMode(): void {
     //return;
     if (this.#mode === "Normal" && Math.random() < this.#exitingProbability) {
       this.#mode = "Exiting";
@@ -201,7 +204,7 @@ class Strand {
     }
   }
 
-  move(effects) {
+  move(effects: Array<(strand: Strand, index: number) => number>): void {
     for (let index = 0; index < this.pointsArray.length; index++) {
       effects.forEach((effect) => {
         this.pointsArray[index].x += effect(this, index);

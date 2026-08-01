@@ -1,6 +1,9 @@
-const coefficients = new Array();
+import { Point } from "../point";
+import { binomialCoefficient } from "./binomialCoefficients";
 
-function mapCoefficients(ctrlPoints, interPoints) {
+const coefficients: number[][] = [];
+
+export function mapCoefficients(ctrlPoints: number, interPoints: number): void {
   const increment = 1 / (interPoints - 1);
   const n = ctrlPoints - 1;
 
@@ -15,13 +18,13 @@ function mapCoefficients(ctrlPoints, interPoints) {
   }
 }
 
-class BezierCurve {
-  #increment;
-  interpolationPoints;
-  #controlPoints;
-  vertices;
+export class BezierCurve {
+  #increment!: number;
+  interpolationPoints: number;
+  #controlPoints: Point[];
+  vertices!: Point[];
 
-  constructor(controlPoints, interpolationPoints) {
+  constructor(controlPoints: Point[], interpolationPoints: number) {
     if (controlPoints.length < 2)
       throw new Error("Need at least 2 points for a Bezier curve");
 
@@ -35,7 +38,7 @@ class BezierCurve {
     this.#_buildVertices();
   }
 
-  #_initVertexList() {
+  #_initVertexList(): void {
     this.#increment = 1 / (this.interpolationPoints - 1);
     this.vertices = new Array(this.interpolationPoints);
     for (let index = 0; index < this.interpolationPoints; index++) {
@@ -43,12 +46,12 @@ class BezierCurve {
     }
   }
 
-  updateControlPoints(controlPoints) {
+  updateControlPoints(controlPoints: Point[]): void {
     this.#controlPoints = controlPoints;
     this.#_buildVertices();
   }
 
-  #_buildVertices() {
+  #_buildVertices(): void {
     let t;
     let coefficient;
     for (let index = 0; index < this.interpolationPoints; index++) {
@@ -64,5 +67,4 @@ class BezierCurve {
       }
     }
   }
-
 }
