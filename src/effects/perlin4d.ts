@@ -61,17 +61,17 @@ const grad4 = new Float32Array([0, 1, 1, 1, 0, 1, 1, -1, 0, 1, -1, 1, 0, 1, -1, 
 
 
 /** Deterministic simplex noise generator suitable for 2D, 3D and 4D spaces. */
-class SimplexNoise {
-  #p;
-  #perm;
-  #permMod12
+export class SimplexNoise {
+  #p: Uint8Array;
+  #perm: Uint8Array;
+  #permMod12: Uint8Array;
   /**
    * Creates a new `SimplexNoise` instance.
    * This involves some setup. You can save a few cpu cycles by reusing the same instance.
    * @param randomOrSeed A random number generator or a seed (string|number).
    * Defaults to Math.random (random irreproducible initialization).
    */
-  constructor(randomOrSeed = Math.random) {
+  constructor(randomOrSeed: (() => number) | string | number = Math.random) {
     const random = typeof randomOrSeed == 'function' ? randomOrSeed : alea(randomOrSeed);
     this.#p = buildPermutationTable(random);
     this.#perm = new Uint8Array(512);
@@ -85,15 +85,14 @@ class SimplexNoise {
 
   /**
    * Samples the noise field in 4 dimensions
-   * @param x 
-   * @param y 
-   * @param z 
+   * @param x
+   * @param y
    * @returns a number in the interval [-1, 1]
    */
-  noise4D(x, y, z, w) {
+  noise4D(x: number, y: number, z: number, w: number): number {
     const perm = this.#perm;
 
-    let n0, n1, n2, n3, n4; // Noise contributions from the five corners
+    let n0: number, n1: number, n2: number, n3: number, n4: number; // Noise contributions from the five corners
     // Skew the (x,y,z,w) space to determine which cell of 24 simplices we're in
     const s = (x + y + z + w) * F4; // Factor for 4D skewing
     const i = Math.floor(x + s);
@@ -223,7 +222,7 @@ class SimplexNoise {
  * Do not rely on this export.
  * @private
  */
-function buildPermutationTable(random) {
+function buildPermutationTable(random: () => number): Uint8Array {
   const p = new Uint8Array(256);
   for (let i = 0; i < 256; i++) {
     p[i] = i;
@@ -242,7 +241,7 @@ The ALEA PRNG and masher code used by simplex-noise.js
 is based on code by Johannes Baagøe, modified by Jonas Wagner.
 See alea.md for the full license.
 */
-function alea(seed) {
+function alea(seed: string | number): () => number {
   let s0 = 0;
   let s1 = 0;
   let s2 = 0;
@@ -274,12 +273,12 @@ function alea(seed) {
   };
 }
 
-function masher() {
+function masher(): (data: string | number) => number {
   let n = 0xefc8249d;
-  return function(data) {
-    data = data.toString();
-    for (let i = 0; i < data.length; i++) {
-      n += data.charCodeAt(i);
+  return function(data: string | number) {
+    const str = data.toString();
+    for (let i = 0; i < str.length; i++) {
+      n += str.charCodeAt(i);
       let h = 0.02519603282416938 * n;
       n = h >>> 0;
       h -= n;

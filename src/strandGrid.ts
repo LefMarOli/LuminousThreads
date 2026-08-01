@@ -1,11 +1,23 @@
-class StrandGrid {
-  #perlinNoise;
-  #warpState = "Decreasing"; //Increasing, Decreasing
+import type p5 from "p5";
+import { Point } from "./point";
+import { Strand } from "./strand";
+import { PerlinNoise } from "./effects/noise";
+import { stiffnessEffect } from "./effects/stiffness";
+import { mapCoefficients } from "./bezier/bezierCurve";
+
+export class StrandGrid {
+  startColor: p5.Color;
+  endColor: p5.Color;
+  numStrands: number;
+  strands: Strand[];
+  numPoints: number;
+  #perlinNoise: PerlinNoise;
+  #warpState: "Increasing" | "Decreasing" = "Decreasing";
   #warpProbability = 0.5;
 
   constructor(
-    width,
-    height,
+    width: number,
+    height: number,
     gapX = 20,
     margin = 10,
     numPoints = 30,
@@ -23,7 +35,7 @@ class StrandGrid {
     this.numPoints = numPoints;
     mapCoefficients(numPoints, interpolationPoints);
     const gapY = Math.ceil((anchorY - margin) / (this.numPoints - 1));
-    const dataPoints = Array(this.numPoints);
+    const dataPoints: Point[] = Array(this.numPoints);
     for (let y = 0; y < this.numPoints; y++) {
       dataPoints[y] = new Point();
     }
@@ -58,11 +70,11 @@ class StrandGrid {
     }, 3 * 1000);
   }
 
-  draw() {
+  draw(): void {
     this.strands.forEach((strand) => strand.draw());
   }
 
-  move() {
+  move(): void {
     this.#perlinNoise.noiseStep(this.#warpState);
     this.strands.forEach((strand) =>
       strand.move([this.#perlinNoise.noiseEffect, stiffnessEffect])

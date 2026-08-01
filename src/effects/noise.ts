@@ -1,24 +1,28 @@
+import type { Strand } from "../strand";
+import { sigmoid } from "./sigmoid";
+import { SimplexNoise } from "./perlin4d";
+
 const noiseScaleX = 0.005;
 const noiseScaleY = 0.005;
 const noiseLevel = 10;
 const TWO_PI = Math.PI * 2;
-let z;
-let w;
-let R;
-let Simplex;
+let z!: number;
+let w!: number;
+let R!: number;
+let Simplex!: SimplexNoise;
 const maxWarpFactor = 1.5;
 const minWarpFactor = 1.0;
 const warpDelay = 1 / 1000;
-let warpFactor = 1;
-let blip = 'Off';
+let warpFactor: number = 1;
+let blip: string = 'Off';
 
-class PerlinNoise {
-  #speedRadians;
-  #angle;
+export class PerlinNoise {
+  #speedRadians: number;
+  #angle: number;
   #warpProgress = 0;
-  #fft
+  #fft: unknown;
 
-  constructor(seed, loopTime, fft) {
+  constructor(seed: number, loopTime: number, fft?: unknown) {
     Simplex = new SimplexNoise(seed ?? Math.random);
 
     this.#speedRadians = TWO_PI / (loopTime * 1000);
@@ -29,7 +33,7 @@ class PerlinNoise {
     w = R;
   }
 
-  noiseStep(flag) {
+  noiseStep(flag: "Increasing" | "Decreasing"): void {
     if (flag === "Increasing" && warpFactor < maxWarpFactor) {
       const current = sigmoid(this.#warpProgress);
       this.#warpProgress += deltaTime * warpDelay;
@@ -48,7 +52,7 @@ class PerlinNoise {
     w = R * Math.sin(this.#angle);
   }
 
-  noiseEffect(strand, index) {
+  noiseEffect(strand: Strand, index: number): number {
     const point = strand.pointsArray[index];
 
     const x = point.x * noiseScaleX;

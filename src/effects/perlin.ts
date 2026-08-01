@@ -1,6 +1,6 @@
 let perm = createxorperm(256);
 
-function xorshift32(x) {
+function xorshift32(x: number): number {
   x *= 7;
   x &= 0xff;
   x = x ^ (x << 13);
@@ -9,7 +9,7 @@ function xorshift32(x) {
   return x;
 }
 
-function createxorperm(size) {
+function createxorperm(size: number): Uint8Array {
   let p = new Uint8Array(size * 2);
   for (let i = 0; i < p.length; ++i) {
     p[i] = xorshift32(i);
@@ -17,8 +17,8 @@ function createxorperm(size) {
   return p;
 }
 
-function fractalPerlinNoise4d(
-  x,
+export function fractalPerlinNoise4d(
+  x: number,
   y = 0,
   z = 0,
   w = 0,
@@ -26,7 +26,7 @@ function fractalPerlinNoise4d(
   persistence = 0.5,
   scaleFactor = 2,
   offset = 0.618
-) {
+): number {
   let noiseSum = perlinNoise4d(x, y, z, w);
   let maxValue = 1;
   let iSF = 1 / scaleFactor;
@@ -50,7 +50,7 @@ function fractalPerlinNoise4d(
   return noiseSum / maxValue;
 }
 
-function perlinNoise4d(w, x = 0, y = 0, z = 0) {
+export function perlinNoise4d(w: number, x = 0, y = 0, z = 0): number {
   let ww = Math.floor(w);
   let w0 = w - ww;
   let w1 = w0 - 1;
@@ -451,26 +451,24 @@ function perlinNoise4d(w, x = 0, y = 0, z = 0) {
              + k11*wxy + k12*wxz + k13*wyz + k14*xyz + k15*wxyz
 
   return result;
-
-  let dw = dFadeQuintic(w0)*(k01 + k05*x + k06*y + k07*z + k11*xy + k12*xz + k13*yz + k15*xyz);
-  let dx = dFadeQuintic(x0)*(k02 + k05*w + k08*y + k09*z + k11*wy + k12*wz + k14*yz + k15*wyz);
-  let dy = dFadeQuintic(y0)*(k03 + k06*w + k08*x + k10*z + k11*wx + k13*wz + k14*xz + k15*wxz);
-  let dz = dFadeQuintic(z0)*(k04 + k07*w + k09*x + k10*y + k12*wx + k13*wy + k14*xy + k15*wxy);
-
-  return [result, dw, dx, dy, dz];
   }
+  // Note: this originally also returned derivatives [result, dw, dx, dy, dz] via
+  // unreachable dead code after the `return result` above. That tail returned a
+  // different shape (number[]) than the live path (number), which TS can't type
+  // both at once, so it's dropped here rather than left in as dead code that
+  // doesn't typecheck. Nothing calls this function at all currently either way.
 }
 
-function fadeCubic(t) {
+function fadeCubic(t: number): number {
   return t * t * (-2 * t + 3);
 }
-function dFadeCubic(t) {
+function dFadeCubic(t: number): number {
   return t * (6 - 6 * t);
 }
 
-function fadeQuintic(t) {
+function fadeQuintic(t: number): number {
   return t * t * t * (t * (t * 6 - 15) + 10);
 }
-function dFadeQuintic(t) {
+function dFadeQuintic(t: number): number {
   return t * t * (t * (30 * t - 60) + 30);
 }

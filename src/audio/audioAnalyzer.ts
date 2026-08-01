@@ -1,12 +1,27 @@
-class AudioAnalysis {
-  #fft;
-  #bassEnergyValue;
-  #midEnergyValue;
-  #trebleEnergyValue;
-  #beatDetector;
-  #source;
+import p5 from "p5";
+import { EnergyValue } from "./energyValue";
+import { BeatDetector } from "./beatDetector";
+import type { MicAudioSource } from "./input/micAudioSource";
+import type { FileAudioSource } from "./input/fileAudioSource";
+import type { StreamAudioSource } from "./input/streamAudioSource";
 
-  constructor(source) {
+export class AudioAnalysis {
+  #fft: p5.FFT;
+  #bassEnergyValue: EnergyValue;
+  #midEnergyValue: EnergyValue;
+  #trebleEnergyValue: EnergyValue;
+  #beatDetector: BeatDetector;
+  #source: MicAudioSource | FileAudioSource | StreamAudioSource;
+
+  bass: number;
+  mid: number;
+  treble: number;
+  energy: number;
+  spectrum: any[];
+  waveform: any[];
+  beat: boolean;
+
+  constructor(source: MicAudioSource | FileAudioSource | StreamAudioSource) {
     this.#fft = new p5.FFT(0.9, 1024);
     this.#source = source;
     this.#bassEnergyValue = new EnergyValue(0.15, 50, 200);
@@ -23,12 +38,12 @@ class AudioAnalysis {
     this.beat = false;
   }
 
-  start() {
+  start(): void {
     this.#source.connect(this.#fft);
     this.#source.start();
   }
 
-  update() {
+  update(): void {
     this.spectrum = this.#fft.analyze();
     this.waveform = this.#fft.waveform();
 
