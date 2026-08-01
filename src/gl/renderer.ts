@@ -18,8 +18,9 @@ const STRAND_HALF_WIDTH = 3;
 // length the old background(0,0,0,0.06) gave a bright pixel (~4/255 in the
 // equivalent 8-bit terms) - verified directly (pixel-tracing across many
 // frames) to converge to exactly zero with no residual tint or flicker,
-// which was the whole point of this rewrite.
-const TRAIL_DECAY_AMOUNT = 4 / 255;
+// which was the whole point of this rewrite. Exported so the controls
+// panel's trail-length slider can use the same value as its default.
+export const DEFAULT_TRAIL_DECAY_AMOUNT = 4 / 255;
 
 export class Renderer {
   #gl: WebGL2RenderingContext;
@@ -35,6 +36,7 @@ export class Renderer {
   #projection!: Float32Array;
   #wireframeEnabled = false;
   #feedbackBuffer: FeedbackBuffer;
+  #trailDecayAmount = DEFAULT_TRAIL_DECAY_AMOUNT;
 
   constructor(
     gl: WebGL2RenderingContext,
@@ -140,6 +142,10 @@ export class Renderer {
     this.#wireframeEnabled = !this.#wireframeEnabled;
   }
 
+  setTrailDecayAmount(value: number): void {
+    this.#trailDecayAmount = value;
+  }
+
   resize(width: number, height: number, strandGrid: StrandGrid): void {
     this.#buildMeshAndBuffers(strandGrid);
     this.#projection = createOrthoProjection(width, height);
@@ -164,7 +170,7 @@ export class Renderer {
     // afterward - a real bug caught here on first run: without this, the
     // strand draw call below silently used the feedback buffer's empty
     // VAO instead, rendering nothing.
-    this.#feedbackBuffer.beginFrame(TRAIL_DECAY_AMOUNT);
+    this.#feedbackBuffer.beginFrame(this.#trailDecayAmount);
     gl.bindVertexArray(this.#vao);
 
     // Fragment shader outputs premultiplied color (rgb*a, a) - paired with

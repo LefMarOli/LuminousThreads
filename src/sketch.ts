@@ -5,7 +5,8 @@ import { MicAudioSource } from "./audio/input/micAudioSource";
 import { FileAudioSource } from "./audio/input/fileAudioSource";
 import { AudioAnalysis } from "./audio/audioAnalyzer";
 import { acquireGlContext } from "./gl/glContext";
-import { Renderer } from "./gl/renderer";
+import { Renderer, DEFAULT_TRAIL_DECAY_AMOUNT } from "./gl/renderer";
+import { ControlsPanel } from "./ui/controlsPanel";
 
 // Sound-reactive visuals aren't actually wired into any rendering yet -
 // AudioAnalysis's output below only ever gets console.logged. Turned off
@@ -13,6 +14,14 @@ import { Renderer } from "./gl/renderer";
 // permission prompt, FFT, loading Tone.js) has its own real cost and isn't
 // needed for that right now. Flip back to true to re-enable.
 const AUDIO_ENABLED = false;
+
+// Bounds for the controls panel's trail-length slider. The underlying
+// renderer parameter is a decay *rate* (smaller = slower fade = longer
+// trail) - the inverse of how "trail length" reads as a slider, so the
+// mapping is inverted in the slider's onChange below rather than exposing
+// that inversion as part of ControlsPanel itself.
+const MIN_TRAIL_DECAY = 0.002; // longest trail
+const MAX_TRAIL_DECAY = 0.08; // shortest/crispest trail
 
 // Importing p5 as a real ES module (rather than loading the browser <script>
 // build) skips p5's own "no module system detected, auto-bootstrap global
@@ -41,6 +50,7 @@ let audioAnalyzer: AudioAnalysis | undefined;
 let maxVal = 0;
 let gl!: WebGL2RenderingContext;
 let renderer!: Renderer;
+let controlsPanel!: ControlsPanel;
 
 function setup(): void {
   frameRate(60);
@@ -69,6 +79,23 @@ function setup(): void {
     strandGrid,
     capabilities.hasFloatColorBuffer,
   );
+
+  controlsPanel = new ControlsPanel();
+  const defaultTrailLengthFraction =
+    (MAX_TRAIL_DECAY - DEFAULT_TRAIL_DECAY_AMOUNT) /
+    (MAX_TRAIL_DECAY - MIN_TRAIL_DECAY);
+  controlsPanel.addSlider({
+    label: "Trail Length",
+    min: 0,
+    max: 1,
+    step: 0.01,
+    initialValue: defaultTrailLengthFraction,
+    onChange: (fraction) => {
+      const decayAmount =
+        MAX_TRAIL_DECAY - fraction * (MAX_TRAIL_DECAY - MIN_TRAIL_DECAY);
+      renderer.setTrailDecayAmount(decayAmount);
+    },
+  });
 
   if (AUDIO_ENABLED) {
     userStartAudio();
@@ -117,6 +144,8 @@ function keyPressed(): void {
     windowResized();
   } else if (key === "w") {
     renderer.toggleWireframe();
+  } else if (key === "m") {
+    controlsPanel.toggle();
   }
 }
 
