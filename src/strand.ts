@@ -115,6 +115,12 @@ export class Strand {
       last.x,
       last.y,
     );
+    const midGradient = ctx.createLinearGradient(
+        first.x,
+        first.y,
+        last.x,
+        last.y,
+    );
     const sharpGradient = ctx.createLinearGradient(
       first.x,
       first.y,
@@ -133,6 +139,7 @@ export class Strand {
     for (let index = 0; index <= lastIndex; index += this.#colorStopStride) {
       this.#addGradientStops(
         glowGradient,
+        midGradient,
         sharpGradient,
         vertices,
         index,
@@ -142,6 +149,7 @@ export class Strand {
     if (lastIndex % this.#colorStopStride !== 0) {
       this.#addGradientStops(
         glowGradient,
+        midGradient,
         sharpGradient,
         vertices,
         lastIndex,
@@ -149,8 +157,12 @@ export class Strand {
       );
     }
 
-    ctx.lineWidth = 6;
+    ctx.lineWidth = 7;
     ctx.strokeStyle = glowGradient;
+    ctx.stroke();
+
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = midGradient;
     ctx.stroke();
 
     ctx.lineWidth = 2;
@@ -220,6 +232,7 @@ export class Strand {
 
   #addGradientStops(
     glowGradient: CanvasGradient,
+    midGradient: CanvasGradient,
     sharpGradient: CanvasGradient,
     vertices: Point[],
     index: number,
@@ -235,7 +248,11 @@ export class Strand {
 
     glowGradient.addColorStop(
       heightPerc,
-      hsbaToRgbaCss(gradHue, 100, segmentBrightness, gradAlpha * 0.3),
+      hsbaToRgbaCss(gradHue, 100, segmentBrightness, gradAlpha * 0.4),
+    );
+    midGradient.addColorStop(
+        heightPerc,
+        hsbaToRgbaCss(gradHue, 100, segmentBrightness, gradAlpha * 0.6),
     );
     sharpGradient.addColorStop(
       heightPerc,
@@ -245,8 +262,7 @@ export class Strand {
 
   #highlightFactor(p1: Point, p2: Point): number {
     const middleX = (p1.x + p2.x) / 2.0;
-    const fa = 1.0 / Math.pow(Math.abs(this.initX - middleX), 1 / 9);
-    return fa;
+    return 1.0 / Math.pow(Math.abs(this.initX - middleX), 1 / 9);
   }
 
   // Replaces what used to build two p5.Color objects and lerpColor() them
@@ -278,7 +294,6 @@ export class Strand {
   }
 
   #switchMode(): void {
-    //return;
     if (this.#mode === "Normal" && Math.random() < this.#exitingProbability) {
       this.#mode = "Exiting";
       if (Math.random() > 0.5) {
