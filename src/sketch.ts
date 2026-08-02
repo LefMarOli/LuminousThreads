@@ -90,6 +90,8 @@ new p5((p: p5) => {
       max: 30,
       step: 1,
       initialValue: 10,
+      description:
+        "How strongly strands wobble sideways from the noise-driven wind effect.",
       onChange: (value) => strandGrid.setNoiseLevel(value),
     });
     controlsPanel.addSlider({
@@ -98,6 +100,8 @@ new p5((p: p5) => {
       max: 3,
       step: 0.1,
       initialValue: 1.5,
+      description:
+        "How much the periodic random gusts amplify the sway on top of the base amount.",
       onChange: (value) => strandGrid.setGustIntensity(value),
     });
     controlsPanel.addSlider({
@@ -107,6 +111,8 @@ new p5((p: p5) => {
       step: 0.0001,
       initialValue: 0.0005,
       decimals: 4,
+      description:
+        "How snappy vs. loose strands spring back toward their resting position.",
       onChange: (value) => setStiffnessCoefficient(value),
     });
 
@@ -117,6 +123,7 @@ new p5((p: p5) => {
       max: 3,
       step: 0.1,
       initialValue: 1,
+      description: "How fast each strand's hue drifts and cycles over time.",
       onChange: (value) => setColorSpeedMultiplier(value),
     });
     controlsPanel.addSlider({
@@ -125,6 +132,8 @@ new p5((p: p5) => {
       max: 1,
       step: 0.05,
       initialValue: 0.45,
+      description:
+        "How much of a strand's length fades in and out at its top and bottom ends.",
       onChange: (value) => setFadePercentage(value),
     });
 
@@ -135,6 +144,7 @@ new p5((p: p5) => {
       max: 8,
       step: 0.5,
       initialValue: 3,
+      description: "How thick the glowing strands render.",
       onChange: (value) => renderer.setStrandWidth(value),
     });
     const defaultTrailLengthFraction =
@@ -146,6 +156,8 @@ new p5((p: p5) => {
       max: 1,
       step: 0.01,
       initialValue: defaultTrailLengthFraction,
+      description:
+        "How long the fading light trail lingers behind each strand.",
       onChange: (fraction) => {
         const decayAmount =
           MAX_TRAIL_DECAY - fraction * (MAX_TRAIL_DECAY - MIN_TRAIL_DECAY);

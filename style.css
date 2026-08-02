@@ -64,3 +64,8 @@ canvas {
   padding-top: 0;
   border-top: none;
 }
+
+.controls-panel__info {
+  color: #888;
+  cursor: help;
+}

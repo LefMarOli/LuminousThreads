@@ -9,6 +9,10 @@ export interface SliderConfig {
   // sits below 0.01 (e.g. a 0.0001-0.0015 spring coefficient) need more, or
   // toFixed(2) rounds every value in range to the same "0.00".
   decimals?: number;
+  // Shown via a small hoverable info icon next to the label, using the
+  // browser's native title tooltip rather than a custom-positioned one -
+  // this project's own "minimal DOM, no extra machinery" pattern.
+  description?: string;
 }
 
 // Generic toggleable panel of labeled sliders - deliberately knows nothing
@@ -39,6 +43,14 @@ export class ControlsPanel {
     const labelText = document.createElement("span");
     labelText.className = "controls-panel__label";
     labelText.textContent = config.label;
+
+    if (config.description) {
+      const info = document.createElement("span");
+      info.className = "controls-panel__info";
+      info.textContent = "ⓘ"; // circled "i"
+      info.title = config.description;
+      labelText.append(" ", info);
+    }
 
     const decimals = config.decimals ?? 2;
 
