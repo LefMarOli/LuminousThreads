@@ -38,9 +38,7 @@ built with p5.js v2 + TypeScript + WebGL2, bundled with Vite.
   (`gl.*` calls directly against the real WebGL2 context).
 - Keep `npm run typecheck`, `npm run lint`, `npm run format`, and
   `npm run build` clean at all times.
-
-## Working branch
-
-Active development happens on `typescript-migration`, not yet merged into
-`main` — check `git branch`/`git log` before assuming `main` reflects
-current work.
+- Manually-disabled code (a call commented out rather than removed, e.g.
+  `#switchMode()` in `strand.ts`) is usually a pending controls-panel
+  toggle, not abandoned dead code — the panel's intent is to progressively
+  replace that pattern with real UI controls (trail length was the first).
