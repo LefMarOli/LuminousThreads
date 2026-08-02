@@ -91,10 +91,10 @@ export class Strand {
   // path); now that rendering happens via the WebGL renderer reading
   // vertices/getVertexColor() directly, this is the only per-frame work
   // Strand itself still needs to do.
-  update(): void {
+  update(deltaTime: number): void {
     //this.#switchMode();
-    this.#updateTravel();
-    this.#updateHue();
+    this.#updateTravel(deltaTime);
+    this.#updateHue(deltaTime);
   }
 
   // Per-vertex RGB + alpha for the WebGL mesh tessellator - full
@@ -126,14 +126,14 @@ export class Strand {
     return [r, g, b, alpha];
   }
 
-  #updateHue(): void {
+  #updateHue(deltaTime: number): void {
     this.#startHue += this.#colorSpeed * deltaTime;
     this.#startHue %= 360;
     this.#endHue += this.#colorSpeed * deltaTime;
     this.#endHue %= 360;
   }
 
-  #updateTravel(): void {
+  #updateTravel(deltaTime: number): void {
     this.#loopTimestamp += deltaTime;
     this.#loopTimestamp %= this.#loopDuration;
 

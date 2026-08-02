@@ -1,3 +1,5 @@
+import type p5 from "p5";
+
 export interface GlCapabilities {
   hasFloatColorBuffer: boolean;
 }
@@ -12,8 +14,8 @@ export interface GlAcquisition {
 // This is the same "grab the raw context and bypass p5's own drawing API"
 // pattern already established for Canvas2D in strand.ts, just for gl.* calls
 // instead of ctx.* calls.
-export function acquireGlContext(): GlAcquisition {
-  const ctx = drawingContext;
+export function acquireGlContext(p: p5): GlAcquisition {
+  const ctx = p.drawingContext;
   if (!(ctx instanceof WebGL2RenderingContext)) {
     throw new Error(
       "Expected drawingContext to be a WebGL2RenderingContext - was createCanvas() called with the WEBGL mode flag?",

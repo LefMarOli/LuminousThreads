@@ -7,6 +7,7 @@ export class NormalizedValue {
   }
 
   update(value: number): number {
-    return constrain((value - this.#min) / (this.#max - this.#min), 0, 1);
+    const t = (value - this.#min) / (this.#max - this.#min);
+    return Math.min(Math.max(t, 0), 1);
   }
 }
