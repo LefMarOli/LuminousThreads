@@ -37,6 +37,7 @@ export class Renderer {
   #wireframeEnabled = false;
   #feedbackBuffer: FeedbackBuffer;
   #trailDecayAmount = DEFAULT_TRAIL_DECAY_AMOUNT;
+  #strandWidth = STRAND_HALF_WIDTH;
 
   constructor(
     gl: WebGL2RenderingContext,
@@ -98,7 +99,7 @@ export class Renderer {
     this.#mesh = new StrandMesh(
       strandGrid.numStrands,
       strandGrid.strands[0].interpolationPoints,
-      STRAND_HALF_WIDTH,
+      this.#strandWidth,
     );
 
     gl.bindVertexArray(this.#vao);
@@ -144,6 +145,11 @@ export class Renderer {
 
   setTrailDecayAmount(value: number): void {
     this.#trailDecayAmount = value;
+  }
+
+  setStrandWidth(value: number): void {
+    this.#strandWidth = value;
+    this.#mesh.setHalfWidth(value);
   }
 
   resize(width: number, height: number, strandGrid: StrandGrid): void {

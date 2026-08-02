@@ -4,13 +4,11 @@ import { SimplexNoise } from "./perlin4d";
 
 const noiseScaleX = 0.005;
 const noiseScaleY = 0.005;
-const noiseLevel = 10;
 const TWO_PI = Math.PI * 2;
 let z!: number;
 let w!: number;
 let R!: number;
 let Simplex!: SimplexNoise;
-const maxWarpFactor = 1.5;
 const minWarpFactor = 1.0;
 const warpDelay = 1 / 1000;
 let warpFactor: number = 1;
@@ -20,6 +18,8 @@ export class PerlinNoise {
   #angle: number;
   #warpProgress = 0;
   #fft: unknown;
+  #noiseLevel = 10;
+  #maxWarpFactor = 1.5;
 
   constructor(seed: number, loopTime: number, fft?: unknown) {
     Simplex = new SimplexNoise(seed ?? Math.random);
@@ -32,8 +32,16 @@ export class PerlinNoise {
     w = R;
   }
 
+  setNoiseLevel(value: number): void {
+    this.#noiseLevel = value;
+  }
+
+  setMaxWarpFactor(value: number): void {
+    this.#maxWarpFactor = value;
+  }
+
   noiseStep(flag: "Increasing" | "Decreasing", deltaTime: number): void {
-    if (flag === "Increasing" && warpFactor < maxWarpFactor) {
+    if (flag === "Increasing" && warpFactor < this.#maxWarpFactor) {
       const current = sigmoid(this.#warpProgress);
       this.#warpProgress += deltaTime * warpDelay;
       const next = sigmoid(this.#warpProgress);
@@ -51,7 +59,13 @@ export class PerlinNoise {
     w = R * Math.sin(this.#angle);
   }
 
-  noiseEffect(strand: Strand, index: number): number {
+  // Arrow function field, not a method - strandGrid.ts passes this around
+  // as a bare callback (`strand.move([this.#perlinNoise.noiseEffect, ...])`),
+  // detached from its receiver. A regular method would see `this` as
+  // undefined once called that way; binding `this` lexically here keeps it
+  // safe to pass around detached, now that it reads instance state
+  // (#noiseLevel) instead of only module-level values.
+  noiseEffect = (strand: Strand, index: number): number => {
     const point = strand.pointsArray[index];
 
     const x = point.x * noiseScaleX;
@@ -61,6 +75,6 @@ export class PerlinNoise {
     const aw = w * warpFactor;
 
     const noiseValue = Simplex.noise4D(x, y, az, aw);
-    return (noiseLevel * noiseValue) / 2.0;
-  }
+    return (this.#noiseLevel * noiseValue) / 2.0;
+  };
 }

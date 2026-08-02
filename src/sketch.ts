@@ -8,6 +8,8 @@ import { acquireGlContext } from "./gl/glContext";
 import { Renderer, DEFAULT_TRAIL_DECAY_AMOUNT } from "./gl/renderer";
 import { ControlsPanel } from "./ui/controlsPanel";
 import { userStartAudio } from "./audio/p5Sound";
+import { setStiffnessCoefficient } from "./effects/stiffness";
+import { setColorSpeedMultiplier, setFadePercentage } from "./strand";
 
 // Sound-reactive visuals aren't actually wired into any rendering yet -
 // AudioAnalysis's output below only ever gets console.logged. Turned off
@@ -80,6 +82,61 @@ new p5((p: p5) => {
     );
 
     controlsPanel = new ControlsPanel();
+
+    controlsPanel.addGroup("Motion");
+    controlsPanel.addSlider({
+      label: "Sway Amount",
+      min: 0,
+      max: 30,
+      step: 1,
+      initialValue: 10,
+      onChange: (value) => strandGrid.setNoiseLevel(value),
+    });
+    controlsPanel.addSlider({
+      label: "Gust Intensity",
+      min: 1,
+      max: 3,
+      step: 0.1,
+      initialValue: 1.5,
+      onChange: (value) => strandGrid.setGustIntensity(value),
+    });
+    controlsPanel.addSlider({
+      label: "Spring Stiffness",
+      min: 0.0001,
+      max: 0.0015,
+      step: 0.0001,
+      initialValue: 0.0005,
+      decimals: 4,
+      onChange: (value) => setStiffnessCoefficient(value),
+    });
+
+    controlsPanel.addGroup("Color");
+    controlsPanel.addSlider({
+      label: "Color Speed",
+      min: 0,
+      max: 3,
+      step: 0.1,
+      initialValue: 1,
+      onChange: (value) => setColorSpeedMultiplier(value),
+    });
+    controlsPanel.addSlider({
+      label: "Fade Length",
+      min: 0.1,
+      max: 1,
+      step: 0.05,
+      initialValue: 0.45,
+      onChange: (value) => setFadePercentage(value),
+    });
+
+    controlsPanel.addGroup("Rendering");
+    controlsPanel.addSlider({
+      label: "Strand Width",
+      min: 1,
+      max: 8,
+      step: 0.5,
+      initialValue: 3,
+      onChange: (value) => renderer.setStrandWidth(value),
+    });
     const defaultTrailLengthFraction =
       (MAX_TRAIL_DECAY - DEFAULT_TRAIL_DECAY_AMOUNT) /
       (MAX_TRAIL_DECAY - MIN_TRAIL_DECAY);

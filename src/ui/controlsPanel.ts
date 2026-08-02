@@ -5,6 +5,10 @@ export interface SliderConfig {
   step: number;
   initialValue: number;
   onChange: (value: number) => void;
+  // Readout precision - defaults to 2. Parameters whose whole useful range
+  // sits below 0.01 (e.g. a 0.0001-0.0015 spring coefficient) need more, or
+  // toFixed(2) rounds every value in range to the same "0.00".
+  decimals?: number;
 }
 
 // Generic toggleable panel of labeled sliders - deliberately knows nothing
@@ -21,6 +25,13 @@ export class ControlsPanel {
     document.body.appendChild(this.#container);
   }
 
+  addGroup(title: string): void {
+    const heading = document.createElement("div");
+    heading.className = "controls-panel__group-title";
+    heading.textContent = title;
+    this.#container.appendChild(heading);
+  }
+
   addSlider(config: SliderConfig): void {
     const row = document.createElement("label");
     row.className = "controls-panel__row";
@@ -29,9 +40,11 @@ export class ControlsPanel {
     labelText.className = "controls-panel__label";
     labelText.textContent = config.label;
 
+    const decimals = config.decimals ?? 2;
+
     const valueText = document.createElement("span");
     valueText.className = "controls-panel__value";
-    valueText.textContent = config.initialValue.toFixed(2);
+    valueText.textContent = config.initialValue.toFixed(decimals);
 
     const input = document.createElement("input");
     input.type = "range";
@@ -41,7 +54,7 @@ export class ControlsPanel {
     input.value = String(config.initialValue);
     input.addEventListener("input", () => {
       const value = Number(input.value);
-      valueText.textContent = value.toFixed(2);
+      valueText.textContent = value.toFixed(decimals);
       config.onChange(value);
     });
 

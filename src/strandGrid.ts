@@ -68,6 +68,14 @@ export class StrandGrid {
     }, 3 * 1000);
   }
 
+  setNoiseLevel(value: number): void {
+    this.#perlinNoise.setNoiseLevel(value);
+  }
+
+  setGustIntensity(value: number): void {
+    this.#perlinNoise.setMaxWarpFactor(value);
+  }
+
   // Per-strand CPU state update (mode/travel/hue) - the WebGL renderer
   // reads vertices/getVertexColor() directly, it doesn't call this itself.
   update(deltaTime: number): void {

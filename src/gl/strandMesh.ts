@@ -57,6 +57,10 @@ export class StrandMesh {
     this.#buildIndices();
   }
 
+  setHalfWidth(value: number): void {
+    this.#halfWidth = value;
+  }
+
   #buildIndices(): void {
     const vertsPerStrand = this.#interpolationPoints * 2;
     let o = 0;

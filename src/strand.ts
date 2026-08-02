@@ -28,6 +28,20 @@ function hsbToRgb(
   return [f(5), f(3), f(1)];
 }
 
+// Shared across all strands (rather than per-instance fields) so the
+// controls panel's sliders take effect on every strand immediately,
+// not just ones constructed after a change.
+let fadePercentage = 0.45;
+let colorSpeedMultiplier = 1;
+
+export function setFadePercentage(value: number): void {
+  fadePercentage = value;
+}
+
+export function setColorSpeedMultiplier(value: number): void {
+  colorSpeedMultiplier = value;
+}
+
 export class Strand {
   pointsArray: Point[];
   initArray: Point[];
@@ -36,7 +50,6 @@ export class Strand {
   #interpolationPoints: number;
   #startHue: number;
   #endHue: number;
-  #fadePerc = 0.45;
   #colorSpeed: number;
   #minColorSpeed = 0.1;
   #mode: "Normal" | "Entering" | "Exiting" | "NoShow" = "Normal";
@@ -132,9 +145,9 @@ export class Strand {
   }
 
   #updateHue(deltaTime: number): void {
-    this.#startHue += this.#colorSpeed * deltaTime;
+    this.#startHue += this.#colorSpeed * colorSpeedMultiplier * deltaTime;
     this.#startHue %= 360;
-    this.#endHue += this.#colorSpeed * deltaTime;
+    this.#endHue += this.#colorSpeed * colorSpeedMultiplier * deltaTime;
     this.#endHue %= 360;
   }
 
@@ -227,9 +240,9 @@ export class Strand {
   // would not reproduce the shortest-path behavior.
   #segmentHueAlpha(heightPerc: number): [hue: number, alpha: number] {
     const startAlpha =
-      heightPerc < this.#fadePerc ? heightPerc / this.#fadePerc : 1;
+      heightPerc < fadePercentage ? heightPerc / fadePercentage : 1;
     const endAlpha =
-      1 - heightPerc < this.#fadePerc ? (1 - heightPerc) / this.#fadePerc : 1;
+      1 - heightPerc < fadePercentage ? (1 - heightPerc) / fadePercentage : 1;
 
     let hueDelta = this.#endHue - this.#startHue;
     if (hueDelta > 180) hueDelta -= 360;
