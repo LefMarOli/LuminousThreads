@@ -1,11 +1,13 @@
+import { createAudioIn, type P5AudioIn, type P5FFT } from "../p5Sound";
+
 export class MicAudioSource {
-  mic: p5.AudioIn;
+  mic: P5AudioIn;
 
   constructor() {
-    this.mic = new p5.AudioIn();
+    this.mic = createAudioIn();
   }
 
-  connect(node: p5.FFT): void {
+  connect(node: P5FFT): void {
     node.setInput(this.mic);
   }
 

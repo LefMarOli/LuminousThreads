@@ -32,7 +32,7 @@ export class PerlinNoise {
     w = R;
   }
 
-  noiseStep(flag: "Increasing" | "Decreasing"): void {
+  noiseStep(flag: "Increasing" | "Decreasing", deltaTime: number): void {
     if (flag === "Increasing" && warpFactor < maxWarpFactor) {
       const current = sigmoid(this.#warpProgress);
       this.#warpProgress += deltaTime * warpDelay;

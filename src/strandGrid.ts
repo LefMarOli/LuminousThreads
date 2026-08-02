@@ -3,10 +3,12 @@ import { Strand } from "./strand";
 import { PerlinNoise } from "./effects/noise";
 import { stiffnessEffect } from "./effects/stiffness";
 import { mapCoefficients } from "./bezier/bezierCurve";
+import { hexToHue } from "./color/hexToHue";
+
+const BASE_START_HUE = hexToHue("#380ef3ff");
+const BASE_END_HUE = hexToHue("#db680aff");
 
 export class StrandGrid {
-  startColor: p5.Color;
-  endColor: p5.Color;
   numStrands: number;
   strands: Strand[];
   numPoints: number;
@@ -24,10 +26,6 @@ export class StrandGrid {
     interpolationPoints = 150,
     loopDuration = 50,
   ) {
-    colorMode(HSB, 360, 100, 100);
-    this.startColor = color("#380ef3ff");
-    this.endColor = color("#db680aff");
-
     this.numStrands = Math.floor((width + 8 * gapX) / gapX);
     this.strands = Array(this.numStrands);
 
@@ -48,8 +46,8 @@ export class StrandGrid {
       }
 
       const amt = (row / this.numStrands) * 360;
-      const startHue = (hue(this.startColor) + amt) % 360;
-      const endHue = (hue(this.endColor) + amt) % 360;
+      const startHue = (BASE_START_HUE + amt) % 360;
+      const endHue = (BASE_END_HUE + amt) % 360;
 
       this.strands[row] = new Strand(
         dataPoints,
@@ -72,12 +70,12 @@ export class StrandGrid {
 
   // Per-strand CPU state update (mode/travel/hue) - the WebGL renderer
   // reads vertices/getVertexColor() directly, it doesn't call this itself.
-  update(): void {
-    this.strands.forEach((strand) => strand.update());
+  update(deltaTime: number): void {
+    this.strands.forEach((strand) => strand.update(deltaTime));
   }
 
-  move(): void {
-    this.#perlinNoise.noiseStep(this.#warpState);
+  move(deltaTime: number): void {
+    this.#perlinNoise.noiseStep(this.#warpState, deltaTime);
     this.strands.forEach((strand) =>
       strand.move([this.#perlinNoise.noiseEffect, stiffnessEffect]),
     );

@@ -1,11 +1,15 @@
-export class FileAudioSource {
-  sound: p5.SoundFile;
+import type p5 from "p5";
 
-  constructor(path: string) {
-    this.sound = loadSound(path);
+import { loadSound, type P5FFT, type P5SoundFile } from "../p5Sound";
+
+export class FileAudioSource {
+  sound: P5SoundFile;
+
+  constructor(p: p5, path: string) {
+    this.sound = loadSound(p, path);
   }
 
-  connect(node: p5.FFT): void {
+  connect(node: P5FFT): void {
     node.setInput(this.sound);
   }
 

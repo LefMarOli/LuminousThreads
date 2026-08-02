@@ -6,8 +6,9 @@ export default tseslint.config(
   tseslint.configs.recommended,
   {
     rules: {
-      // TS ambient globals (p5's global mode, our own .d.ts) aren't visible
-      // to plain no-undef - tsc already catches genuinely undefined names.
+      // tsc already catches genuinely undefined names; no-undef can't see
+      // TS-only ambient types/module augmentations and produces false
+      // positives for them.
       "no-undef": "off",
     },
   },

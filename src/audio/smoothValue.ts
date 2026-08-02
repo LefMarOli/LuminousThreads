@@ -7,7 +7,7 @@ export class SmoothValue {
   }
 
   update(target: number): number {
-    this.#value = lerp(this.#value, target, this.#smoothing);
+    this.#value += (target - this.#value) * this.#smoothing;
     return this.#value;
   }
 }
