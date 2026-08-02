@@ -56,10 +56,10 @@ new p5((p: p5) => {
     p.createCanvas(window.outerWidth, window.outerHeight, p.WEBGL);
     strandGrid = new StrandGrid(window.outerWidth, window.outerHeight);
 
-    // Stage 0 of the WebGL port (see the plan doc): grab the raw context and
-    // bypass p5's own WEBGL-mode 3D drawing API entirely - box()/sphere()/its
-    // camera are never used, this is the same "escape hatch to the real
-    // context" pattern strand.ts already used for Canvas2D.
+    // Grab the raw context and bypass p5's own WEBGL-mode 3D drawing API
+    // entirely - box()/sphere()/its camera are never used, this is the same
+    // "escape hatch to the real context" pattern strand.ts used for Canvas2D
+    // before rendering moved to src/gl/.
     const { gl: acquiredGl, capabilities } = acquireGlContext(p);
     gl = acquiredGl;
 
