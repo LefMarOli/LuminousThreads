@@ -10,9 +10,10 @@ workaround via `'difference'` blending caused a real 30Hz flicker; true
 per-pixel clamped decay on the CPU cost ~15.7ms/frame, more than the whole
 60fps budget). A float/half-float ping-pong framebuffer solves this
 properly - the decay is a single cheap GPU shader pass with real
-precision, no CPU readback, no reflection artifact. See the
-implementation plan for the full design (mesh tessellation, shader-based
-continuous glow, feedback buffer).
+precision, no CPU readback, no reflection artifact. See `src/gl/` for the
+resulting design (mesh tessellation in `strandMesh.ts`, the shader-based
+continuous glow in `shaders/strandShader.ts`, the feedback buffer in
+`feedbackBuffer.ts`).
 
 Measured result (94 strands, 1728×1080, same method as below): frame time
 with the full feedback-buffer trail active is ~12.955ms, versus this

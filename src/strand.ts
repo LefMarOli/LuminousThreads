@@ -85,12 +85,17 @@ export class Strand {
       (loopDuration * interpolationPoints) / (travelSpeedFactor * 1000000);
   }
 
-  // Per-frame CPU state update - mode switching (Normal/Entering/Exiting/
-  // NoShow), the travel-reveal position, and hue drift. Used to run inside
-  // the old Canvas2D draw() (which also built gradients and stroked the
-  // path); now that rendering happens via the WebGL renderer reading
-  // vertices/getVertexColor() directly, this is the only per-frame work
-  // Strand itself still needs to do.
+  // Per-frame CPU state update - the travel-reveal position and hue drift.
+  // Used to run inside the old Canvas2D draw() (which also built gradients
+  // and stroked the path); now that rendering happens via the WebGL
+  // renderer reading vertices/getVertexColor() directly, this is the only
+  // per-frame work Strand itself still needs to do.
+  //
+  // #switchMode() (below) is commented out - a manual stand-in for a
+  // controls-panel toggle (src/ui/controlsPanel.ts) that hasn't been wired
+  // up yet, not a permanent removal. Until it is, #mode never leaves its
+  // initial "Normal", so #updateTravel's Entering/Exiting branches and
+  // #segmentBrightness's matching cases stay unreachable in practice.
   update(deltaTime: number): void {
     //this.#switchMode();
     this.#updateTravel(deltaTime);
