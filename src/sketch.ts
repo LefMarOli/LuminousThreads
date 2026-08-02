@@ -55,8 +55,8 @@ new p5((p: p5) => {
 
   p.setup = () => {
     p.frameRate(60);
-    p.createCanvas(window.outerWidth, window.outerHeight, p.WEBGL);
-    strandGrid = new StrandGrid(window.outerWidth, window.outerHeight);
+    p.createCanvas(window.innerWidth, window.innerHeight, p.WEBGL);
+    strandGrid = new StrandGrid(window.innerWidth, window.innerHeight);
 
     // Grab the raw context and bypass p5's own WEBGL-mode 3D drawing API
     // entirely - box()/sphere()/its camera are never used, this is the same
@@ -66,7 +66,9 @@ new p5((p: p5) => {
     gl = acquiredGl;
 
     // The projection matrix must map the same coordinate space strand
-    // vertices are authored in - window.outerWidth/outerHeight (CSS pixels),
+    // vertices are authored in - window.innerWidth/innerHeight (CSS pixels,
+    // the actual viewport content area - outerWidth/outerHeight include
+    // browser chrome and don't track the visible canvas real estate),
     // matching StrandGrid/BezierCurve/Point - not gl.drawingBufferWidth/Height
     // (confirmed in Stage 0 to differ under a non-1:1 pixelDensity: passing
     // the drawing-buffer size here compressed the whole scene into a quarter
@@ -75,8 +77,8 @@ new p5((p: p5) => {
     // (in Renderer.render()) so rendering stays sharp on high-DPI displays.
     renderer = new Renderer(
       gl,
-      window.outerWidth,
-      window.outerHeight,
+      window.innerWidth,
+      window.innerHeight,
       strandGrid,
       capabilities.hasFloatColorBuffer,
     );
@@ -199,10 +201,10 @@ new p5((p: p5) => {
   };
 
   p.windowResized = () => {
-    p.resizeCanvas(window.outerWidth, window.outerHeight);
+    p.resizeCanvas(window.innerWidth, window.innerHeight);
     strandGrid.destroy();
-    strandGrid = new StrandGrid(window.outerWidth, window.outerHeight);
-    renderer.resize(window.outerWidth, window.outerHeight, strandGrid);
+    strandGrid = new StrandGrid(window.innerWidth, window.innerHeight);
+    renderer.resize(window.innerWidth, window.innerHeight, strandGrid);
   };
 
   p.keyPressed = () => {
