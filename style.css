@@ -26,6 +26,8 @@ canvas {
   font-family: sans-serif;
   font-size: 13px;
   z-index: 10;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
 }
 
 #controls-panel.visible {
@@ -49,20 +51,39 @@ canvas {
   font-variant-numeric: tabular-nums;
 }
 
-.controls-panel__group-title {
+.controls-panel__tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.controls-panel__tab {
+  flex: 1;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #888;
+  font: inherit;
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: #888;
-  margin-top: 4px;
-  padding-top: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0 0 8px;
+  cursor: pointer;
 }
 
-.controls-panel__group-title:first-child {
-  margin-top: 0;
-  padding-top: 0;
-  border-top: none;
+.controls-panel__tab--active {
+  color: #eee;
+  border-bottom-color: #eee;
+}
+
+.controls-panel__section {
+  display: none;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.controls-panel__section--active {
+  display: flex;
 }
 
 .controls-panel__info {

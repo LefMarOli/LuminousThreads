@@ -1,6 +1,10 @@
 import p5 from "p5";
 
-import { StrandGrid } from "./strandGrid";
+import {
+  StrandGrid,
+  DEFAULT_BASE_START_HUE,
+  DEFAULT_BASE_END_HUE,
+} from "./strandGrid";
 import { MicAudioSource } from "./audio/input/micAudioSource";
 import { FileAudioSource } from "./audio/input/fileAudioSource";
 import { AudioAnalysis } from "./audio/audioAnalyzer";
@@ -9,7 +13,11 @@ import { Renderer, DEFAULT_TRAIL_DECAY_AMOUNT } from "./gl/renderer";
 import { ControlsPanel } from "./ui/controlsPanel";
 import { userStartAudio } from "./audio/p5Sound";
 import { setStiffnessCoefficient } from "./effects/stiffness";
-import { setColorSpeedMultiplier, setFadePercentage } from "./strand";
+import {
+  setColorSpeedMultiplier,
+  setFadePercentage,
+  setPeakProbability,
+} from "./strand";
 
 // Sound-reactive visuals aren't actually wired into any rendering yet -
 // AudioAnalysis's output below only ever gets console.logged. Turned off
@@ -53,10 +61,36 @@ new p5((p: p5) => {
   let renderer: Renderer;
   let controlsPanel: ControlsPanel;
 
+  // Constructor args the controls panel can change (Strand Spacing/Start
+  // Hue/End Hue) - unlike most sliders these can't be pushed into an
+  // existing StrandGrid/Strand, so a change re-runs the same rebuild
+  // sequence a window resize already does (see rebuildStrandGrid below).
+  let gapX = 20;
+  let baseStartHue = DEFAULT_BASE_START_HUE;
+  let baseEndHue = DEFAULT_BASE_END_HUE;
+
+  function rebuildStrandGrid(): void {
+    strandGrid.destroy();
+    strandGrid = new StrandGrid(
+      window.innerWidth,
+      window.innerHeight,
+      gapX,
+      baseStartHue,
+      baseEndHue,
+    );
+    renderer.resize(window.innerWidth, window.innerHeight, strandGrid);
+  }
+
   p.setup = () => {
     p.frameRate(60);
     p.createCanvas(window.innerWidth, window.innerHeight, p.WEBGL);
-    strandGrid = new StrandGrid(window.innerWidth, window.innerHeight);
+    strandGrid = new StrandGrid(
+      window.innerWidth,
+      window.innerHeight,
+      gapX,
+      baseStartHue,
+      baseEndHue,
+    );
 
     // Grab the raw context and bypass p5's own WEBGL-mode 3D drawing API
     // entirely - box()/sphere()/its camera are never used, this is the same
@@ -117,6 +151,38 @@ new p5((p: p5) => {
         "How snappy vs. loose strands spring back toward their resting position.",
       onChange: (value) => setStiffnessCoefficient(value),
     });
+    controlsPanel.addSlider({
+      label: "Wave Frequency",
+      min: 0.001,
+      max: 0.02,
+      step: 0.001,
+      initialValue: 0.005,
+      decimals: 3,
+      description:
+        "How tightly packed the noise-driven wave pattern looks along each strand, independent of Sway Amount's intensity.",
+      onChange: (value) => strandGrid.setWaveFrequency(value),
+    });
+    controlsPanel.addSlider({
+      label: "Gust Frequency",
+      min: 0,
+      max: 1,
+      step: 0.05,
+      initialValue: 0.5,
+      description:
+        "How likely a random gust is to kick in every few seconds, independent of Gust Intensity's strength.",
+      onChange: (value) => strandGrid.setGustFrequency(value),
+    });
+    controlsPanel.addSlider({
+      label: "Vanish Frequency",
+      min: 0,
+      max: 0.05,
+      step: 0.002,
+      initialValue: 0.01,
+      decimals: 3,
+      description:
+        "How often a strand randomly travels off-screen and reappears elsewhere in its cycle. Zero keeps every strand always present.",
+      onChange: (value) => setPeakProbability(value),
+    });
 
     controlsPanel.addGroup("Color");
     controlsPanel.addSlider({
@@ -137,6 +203,30 @@ new p5((p: p5) => {
       description:
         "How much of a strand's length fades in and out at its top and bottom ends.",
       onChange: (value) => setFadePercentage(value),
+    });
+    controlsPanel.addSlider({
+      label: "Start Hue",
+      min: 0,
+      max: 360,
+      step: 1,
+      initialValue: DEFAULT_BASE_START_HUE,
+      description: "The base hue each strand's bottom end drifts from.",
+      onChange: (value) => {
+        baseStartHue = value;
+        rebuildStrandGrid();
+      },
+    });
+    controlsPanel.addSlider({
+      label: "End Hue",
+      min: 0,
+      max: 360,
+      step: 1,
+      initialValue: DEFAULT_BASE_END_HUE,
+      description: "The base hue each strand's top end drifts from.",
+      onChange: (value) => {
+        baseEndHue = value;
+        rebuildStrandGrid();
+      },
     });
 
     controlsPanel.addGroup("Rendering");
@@ -164,6 +254,19 @@ new p5((p: p5) => {
         const decayAmount =
           MAX_TRAIL_DECAY - fraction * (MAX_TRAIL_DECAY - MIN_TRAIL_DECAY);
         renderer.setTrailDecayAmount(decayAmount);
+      },
+    });
+    controlsPanel.addSlider({
+      label: "Strand Spacing",
+      min: 10,
+      max: 40,
+      step: 1,
+      initialValue: gapX,
+      description:
+        "Horizontal gap between strands - lower values pack more strands onto the screen.",
+      onChange: (value) => {
+        gapX = value;
+        rebuildStrandGrid();
       },
     });
 
@@ -202,9 +305,7 @@ new p5((p: p5) => {
 
   p.windowResized = () => {
     p.resizeCanvas(window.innerWidth, window.innerHeight);
-    strandGrid.destroy();
-    strandGrid = new StrandGrid(window.innerWidth, window.innerHeight);
-    renderer.resize(window.innerWidth, window.innerHeight, strandGrid);
+    rebuildStrandGrid();
   };
 
   p.keyPressed = () => {

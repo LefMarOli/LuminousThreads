@@ -42,6 +42,15 @@ export function setColorSpeedMultiplier(value: number): void {
   colorSpeedMultiplier = value;
 }
 
+// Amplitude driving #switchMode()'s random Normal<->Exiting/NoShow<->Entering
+// rolls (see #updateTravel) - shared across strands so a slider change
+// takes effect on every strand immediately, same reasoning as fadePercentage.
+let peakProbability = 0.01;
+
+export function setPeakProbability(value: number): void {
+  peakProbability = value;
+}
+
 export class Strand {
   pointsArray: Point[];
   initArray: Point[];
@@ -57,8 +66,7 @@ export class Strand {
   #travelTrailSize = 40;
   #travelSpeed = 0.01;
   #travelPos!: number;
-  #peakProbability = 0.01;
-  #enteringProbability = this.#peakProbability;
+  #enteringProbability = peakProbability;
   #exitingProbability = 0;
   #probabilityPhaseShift = Math.PI / 2;
   #loopDuration: number;
@@ -104,13 +112,13 @@ export class Strand {
   // renderer reading vertices/getVertexColor() directly, this is the only
   // per-frame work Strand itself still needs to do.
   //
-  // #switchMode() (below) is commented out - a manual stand-in for a
-  // controls-panel toggle (src/ui/controlsPanel.ts) that hasn't been wired
-  // up yet, not a permanent removal. Until it is, #mode never leaves its
-  // initial "Normal", so #updateTravel's Entering/Exiting branches and
-  // #segmentBrightness's matching cases stay unreachable in practice.
+  // #switchMode() rolls the dice (amplitude set by the controls panel's
+  // Vanish Frequency slider, see peakProbability above) on whether this
+  // strand starts traveling off-screen and reappearing elsewhere in its
+  // cycle - #updateTravel and #segmentBrightness's Entering/Exiting/NoShow
+  // branches only ever trigger once this call sets #mode away from Normal.
   update(deltaTime: number): void {
-    //this.#switchMode();
+    this.#switchMode();
     this.#updateTravel(deltaTime);
     this.#updateHue(deltaTime);
   }
@@ -157,9 +165,9 @@ export class Strand {
 
     const animationProgress = this.#loopTimestamp / this.#loopDuration;
     this.#exitingProbability =
-      this.#peakProbability * Math.sin(animationProgress * Math.PI);
+      peakProbability * Math.sin(animationProgress * Math.PI);
     this.#enteringProbability =
-      this.#peakProbability *
+      peakProbability *
       Math.sin(animationProgress * Math.PI + this.#probabilityPhaseShift);
 
     if (this.#mode === "Normal" || this.#mode === "NoShow") return;

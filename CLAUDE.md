@@ -26,7 +26,7 @@ built with p5.js v2 + TypeScript + WebGL2, bundled with Vite.
   p5.sound's untyped `FFT`/`AudioIn`/`loadSound`/`userStartAudio` API
   (p5.sound ships zero TypeScript types).
 - `src/ui/controlsPanel.ts` — generic DOM-based labeled-slider panel,
-  toggled by `m`. Currently one slider (trail length).
+  toggled by `m`, grouped into always-on tabs (Motion/Color/Rendering).
 - `docs/performance-tier1-webgl-proposal.md` — design/history doc for the
   WebGL rendering port (why it happened, measured results).
 
@@ -38,7 +38,8 @@ built with p5.js v2 + TypeScript + WebGL2, bundled with Vite.
   (`gl.*` calls directly against the real WebGL2 context).
 - Keep `npm run typecheck`, `npm run lint`, `npm run format`, and
   `npm run build` clean at all times.
-- Manually-disabled code (a call commented out rather than removed, e.g.
-  `#switchMode()` in `strand.ts`) is usually a pending controls-panel
-  toggle, not abandoned dead code — the panel's intent is to progressively
-  replace that pattern with real UI controls (trail length was the first).
+- Manually-disabled code (a call commented out rather than removed) is
+  usually a pending controls-panel toggle, not abandoned dead code — the
+  panel's intent is to progressively replace that pattern with real UI
+  controls (trail length was the first; `strand.ts`'s `#switchMode()` was
+  the second, now controlled by the Vanish Frequency slider).

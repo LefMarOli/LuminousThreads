@@ -15,28 +15,65 @@ export interface SliderConfig {
   description?: string;
 }
 
-// Generic toggleable panel of labeled sliders - deliberately knows nothing
-// about what any individual slider controls (that mapping lives with each
-// caller's onChange), so adding the next parameter is just another
-// addSlider() call, not a redesign.
+// Generic toggleable panel of labeled sliders, grouped into tabs -
+// deliberately knows nothing about what any individual slider controls
+// (that mapping lives with each caller's onChange), so adding the next
+// parameter is just another addSlider() call, not a redesign.
 export class ControlsPanel {
   #container: HTMLDivElement;
+  #tabBar: HTMLDivElement;
+  #tabs: HTMLButtonElement[] = [];
+  #sections: HTMLDivElement[] = [];
+  #currentSection?: HTMLDivElement;
   #visible = false;
 
   constructor() {
     this.#container = document.createElement("div");
     this.#container.id = "controls-panel";
+
+    this.#tabBar = document.createElement("div");
+    this.#tabBar.className = "controls-panel__tabs";
+    this.#container.appendChild(this.#tabBar);
+
     document.body.appendChild(this.#container);
   }
 
   addGroup(title: string): void {
-    const heading = document.createElement("div");
-    heading.className = "controls-panel__group-title";
-    heading.textContent = title;
-    this.#container.appendChild(heading);
+    const tab = document.createElement("button");
+    tab.type = "button";
+    tab.className = "controls-panel__tab";
+    tab.textContent = title;
+
+    const section = document.createElement("div");
+    section.className = "controls-panel__section";
+
+    if (this.#sections.length === 0) {
+      tab.classList.add("controls-panel__tab--active");
+      section.classList.add("controls-panel__section--active");
+    }
+
+    tab.addEventListener("click", () => {
+      this.#tabs.forEach((t) =>
+        t.classList.remove("controls-panel__tab--active"),
+      );
+      this.#sections.forEach((s) =>
+        s.classList.remove("controls-panel__section--active"),
+      );
+      tab.classList.add("controls-panel__tab--active");
+      section.classList.add("controls-panel__section--active");
+    });
+
+    this.#tabBar.appendChild(tab);
+    this.#container.appendChild(section);
+    this.#tabs.push(tab);
+    this.#sections.push(section);
+    this.#currentSection = section;
   }
 
   addSlider(config: SliderConfig): void {
+    if (!this.#currentSection)
+      throw new Error("addSlider() called before any addGroup()");
+
     const row = document.createElement("label");
     row.className = "controls-panel__row";
 
@@ -75,7 +112,7 @@ export class ControlsPanel {
     labelRow.append(labelText, valueText);
 
     row.append(labelRow, input);
-    this.#container.appendChild(row);
+    this.#currentSection.appendChild(row);
   }
 
   toggle(): void {

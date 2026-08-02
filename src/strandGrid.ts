@@ -5,8 +5,8 @@ import { stiffnessEffect } from "./effects/stiffness";
 import { mapCoefficients } from "./bezier/bezierCurve";
 import { hexToHue } from "./color/hexToHue";
 
-const BASE_START_HUE = hexToHue("#380ef3ff");
-const BASE_END_HUE = hexToHue("#db680aff");
+export const DEFAULT_BASE_START_HUE = hexToHue("#380ef3ff");
+export const DEFAULT_BASE_END_HUE = hexToHue("#db680aff");
 
 export class StrandGrid {
   numStrands: number;
@@ -21,6 +21,8 @@ export class StrandGrid {
     width: number,
     height: number,
     gapX = 20,
+    baseStartHue = DEFAULT_BASE_START_HUE,
+    baseEndHue = DEFAULT_BASE_END_HUE,
     margin = 10,
     numPoints = 30,
     interpolationPoints = 150,
@@ -46,8 +48,8 @@ export class StrandGrid {
       }
 
       const amt = (row / this.numStrands) * 360;
-      const startHue = (BASE_START_HUE + amt) % 360;
-      const endHue = (BASE_END_HUE + amt) % 360;
+      const startHue = (baseStartHue + amt) % 360;
+      const endHue = (baseEndHue + amt) % 360;
 
       this.strands[row] = new Strand(
         dataPoints,
@@ -74,6 +76,14 @@ export class StrandGrid {
 
   setGustIntensity(value: number): void {
     this.#perlinNoise.setMaxWarpFactor(value);
+  }
+
+  setWaveFrequency(value: number): void {
+    this.#perlinNoise.setWaveFrequency(value);
+  }
+
+  setGustFrequency(value: number): void {
+    this.#warpProbability = value;
   }
 
   // Per-strand CPU state update (mode/travel/hue) - the WebGL renderer

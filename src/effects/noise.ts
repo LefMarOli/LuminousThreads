@@ -2,8 +2,6 @@ import type { Strand } from "../strand";
 import { sigmoid } from "./sigmoid";
 import { SimplexNoise } from "./perlin4d";
 
-const noiseScaleX = 0.005;
-const noiseScaleY = 0.005;
 const TWO_PI = Math.PI * 2;
 let z!: number;
 let w!: number;
@@ -20,6 +18,8 @@ export class PerlinNoise {
   #fft: unknown;
   #noiseLevel = 10;
   #maxWarpFactor = 1.5;
+  #noiseScaleX = 0.005;
+  #noiseScaleY = 0.005;
 
   constructor(seed: number, loopTime: number, fft?: unknown) {
     Simplex = new SimplexNoise(seed ?? Math.random);
@@ -38,6 +38,11 @@ export class PerlinNoise {
 
   setMaxWarpFactor(value: number): void {
     this.#maxWarpFactor = value;
+  }
+
+  setWaveFrequency(value: number): void {
+    this.#noiseScaleX = value;
+    this.#noiseScaleY = value;
   }
 
   noiseStep(flag: "Increasing" | "Decreasing", deltaTime: number): void {
@@ -68,8 +73,8 @@ export class PerlinNoise {
   noiseEffect = (strand: Strand, index: number): number => {
     const point = strand.pointsArray[index];
 
-    const x = point.x * noiseScaleX;
-    const y = point.y * noiseScaleY;
+    const x = point.x * this.#noiseScaleX;
+    const y = point.y * this.#noiseScaleY;
 
     const az = z * warpFactor;
     const aw = w * warpFactor;
