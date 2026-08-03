@@ -1,5 +1,5 @@
 import type { Strand } from "../strand";
-import { sigmoid } from "./sigmoid";
+import { smoothstep } from "./smoothstep";
 import { SimplexNoise } from "./perlin4d";
 
 const TWO_PI = Math.PI * 2;
@@ -13,6 +13,11 @@ let warpFactor: number = 1;
 export class PerlinNoise {
   #speedRadians: number;
   #angle: number;
+  // Normalized 0-1 progress through the gust ramp - 0 at rest (warpFactor
+  // == minWarpFactor), 1 at full gust (warpFactor == #maxWarpFactor).
+  // Clamped at both ends (see noiseStep below), so unlike the logistic
+  // sigmoid this used to feed, warpFactor actually reaches its target and
+  // holds there instead of forever creeping toward it.
   #warpProgress = 0;
   #fft: unknown;
   #noiseLevel = 10;
@@ -21,8 +26,8 @@ export class PerlinNoise {
   #noiseScaleY = 0.005;
   #speedMultiplier = 1;
   // Scales #warpProgress's per-frame increment in noiseStep below - how
-  // quickly warpFactor's sigmoid ramp climbs toward #maxWarpFactor once a
-  // gust starts, i.e. the gust's "acceleration". Was a fixed module
+  // quickly warpFactor ramps from minWarpFactor to #maxWarpFactor (and back)
+  // once a gust starts, i.e. the gust's "acceleration". Was a fixed module
   // constant; now a live setter so it's tunable the same as the rest of
   // the gust system.
   #gustRampRate = 1 / 1000;
@@ -93,18 +98,15 @@ export class PerlinNoise {
     // via the noise domain's z/w axis even at Noise Speed 0, since gusts run
     // on their own timer independent of the angle's rotation.
     const scaledDeltaTime = deltaTime * this.#speedMultiplier;
+    const rampDelta = scaledDeltaTime * this.#gustRampRate;
 
-    if (flag === "Increasing" && warpFactor < this.#maxWarpFactor) {
-      const current = sigmoid(this.#warpProgress);
-      this.#warpProgress += scaledDeltaTime * this.#gustRampRate;
-      const next = sigmoid(this.#warpProgress);
-      warpFactor += next - current;
-    } else if (flag === "Decreasing" && warpFactor > minWarpFactor) {
-      const current = sigmoid(this.#warpProgress);
-      this.#warpProgress -= scaledDeltaTime * this.#gustRampRate;
-      const next = sigmoid(this.#warpProgress);
-      warpFactor -= current - next;
-    }
+    this.#warpProgress =
+      flag === "Increasing"
+        ? Math.min(this.#warpProgress + rampDelta, 1)
+        : Math.max(this.#warpProgress - rampDelta, 0);
+    warpFactor =
+      minWarpFactor +
+      (this.#maxWarpFactor - minWarpFactor) * smoothstep(this.#warpProgress);
 
     this.#angle += this.#speedRadians * scaledDeltaTime;
     this.#angle %= TWO_PI;
