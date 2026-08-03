@@ -89,6 +89,29 @@ export function setTravelDirectionBias(value: number): void {
   travelDirectionBias = value;
 }
 
+// Selects what #segmentHueAlpha uses as its 0-1 position along the
+// startHue->endHue gradient - "Gradient" (the original behavior) uses
+// heightPerc, i.e. a vertex's position along the strand's length;
+// "Proportional" instead uses how far the vertex has swayed sideways from
+// its rest x position (see displacementColorRange below), so color tracks
+// the strand's own wind-driven motion rather than a fixed vertical ramp.
+let colorMode: "Gradient" | "Proportional" = "Gradient";
+
+export function setColorMode(mode: "Gradient" | "Proportional"): void {
+  colorMode = mode;
+}
+
+// How far a vertex must sway from its rest x position, in either direction,
+// to reach the full startHue/endHue gradient in Proportional mode - there's
+// no natural fixed bound on sway distance (it settles wherever the noise
+// forcing and stiffness spring's restoring force balance out), so this is
+// exposed as a live-tunable knob rather than derived.
+let displacementColorRange = 40;
+
+export function setDisplacementColorRange(value: number): void {
+  displacementColorRange = value;
+}
+
 export class Strand {
   pointsArray: Point[];
   initArray: Point[];
@@ -171,8 +194,8 @@ export class Strand {
   ): [r: number, g: number, b: number, alpha: number] {
     const lastIndex = this.#interpolationPoints - 1;
     const heightPerc = index / lastIndex;
-    const [hue, alpha] = this.#segmentHueAlpha(heightPerc);
     const vertex = this.#bezierCurve.vertices[index];
+    const [hue, alpha] = this.#segmentHueAlpha(heightPerc, vertex.x);
     // #highlightFactor's own clamp keeps this bounded rather than
     // unbounded, but its max (~2x) still overshoots HSB brightness's
     // defined 0-100 domain - clamped here too so a value outside that
@@ -283,16 +306,36 @@ export class Strand {
   // a CPU computation resolved to a real hue value before upload - naive
   // GPU-side interpolation of the raw start/end hues across a triangle
   // would not reproduce the shortest-path behavior.
-  #segmentHueAlpha(heightPerc: number): [hue: number, alpha: number] {
+  //
+  // Alpha always fades by heightPerc (position along the strand's length)
+  // regardless of colorMode - only the hue's 0-1 position along the
+  // startHue->endHue gradient switches to vertexX's sideways displacement
+  // in Proportional mode (see colorMode above).
+  #segmentHueAlpha(
+    heightPerc: number,
+    vertexX: number,
+  ): [hue: number, alpha: number] {
     const startAlpha =
       heightPerc < fadePercentage ? heightPerc / fadePercentage : 1;
     const endAlpha =
       1 - heightPerc < fadePercentage ? (1 - heightPerc) / fadePercentage : 1;
 
+    const gradPerc =
+      colorMode === "Proportional"
+        ? Math.min(
+            Math.max(
+              (vertexX - this.initX + displacementColorRange) /
+                (2 * displacementColorRange),
+              0,
+            ),
+            1,
+          )
+        : heightPerc;
+
     let hueDelta = this.#endHue - this.#startHue;
     if (hueDelta > 180) hueDelta -= 360;
     if (hueDelta < -180) hueDelta += 360;
-    let gradHue = this.#startHue + hueDelta * heightPerc;
+    let gradHue = this.#startHue + hueDelta * gradPerc;
     gradHue = ((gradHue % 360) + 360) % 360;
 
     const gradAlpha = startAlpha + (endAlpha - startAlpha) * heightPerc;

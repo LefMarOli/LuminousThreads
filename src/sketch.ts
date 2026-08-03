@@ -21,6 +21,8 @@ import {
   setTravelSpeedMultiplier,
   setProbabilityPhaseShift,
   setTravelDirectionBias,
+  setColorMode,
+  setDisplacementColorRange,
 } from "./strand";
 
 // Sound-reactive visuals aren't actually wired into any rendering yet -
@@ -288,7 +290,8 @@ new p5((p: p5) => {
       max: 360,
       step: 1,
       initialValue: DEFAULT_BASE_START_HUE,
-      description: "The base hue each strand's bottom end drifts from.",
+      description:
+        "The base hue each strand's bottom end drifts from - in Proportional color mode, this is the hue at the leftmost sway extreme instead.",
       onChange: (value) => {
         baseStartHue = value;
         rebuildStrandGrid();
@@ -300,11 +303,29 @@ new p5((p: p5) => {
       max: 360,
       step: 1,
       initialValue: DEFAULT_BASE_END_HUE,
-      description: "The base hue each strand's top end drifts from.",
+      description:
+        "The base hue each strand's top end drifts from - in Proportional color mode, this is the hue at the rightmost sway extreme instead.",
       onChange: (value) => {
         baseEndHue = value;
         rebuildStrandGrid();
       },
+    });
+    controlsPanel.addToggle({
+      label: "Proportional Color Mode",
+      initialValue: false,
+      description:
+        "Colors each point by how far it has swayed sideways from its rest position (Start Hue on the left, End Hue on the right), instead of by its position along the strand's length.",
+      onChange: (value) => setColorMode(value ? "Proportional" : "Gradient"),
+    });
+    controlsPanel.addSlider({
+      label: "Displacement Range",
+      min: 5,
+      max: 100,
+      step: 5,
+      initialValue: 40,
+      description:
+        "In Proportional color mode, how far a point needs to sway sideways from rest to reach the full Start Hue/End Hue range.",
+      onChange: (value) => setDisplacementColorRange(value),
     });
 
     controlsPanel.addGroup("Rendering");
