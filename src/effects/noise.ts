@@ -20,6 +20,7 @@ export class PerlinNoise {
   #maxWarpFactor = 1.5;
   #noiseScaleX = 0.005;
   #noiseScaleY = 0.005;
+  #speedMultiplier = 1;
 
   constructor(seed: number, loopTime: number, fft?: unknown) {
     Simplex = new SimplexNoise(seed ?? Math.random);
@@ -45,6 +46,14 @@ export class PerlinNoise {
     this.#noiseScaleY = value;
   }
 
+  // Multiplies #speedRadians below - a shared knob for how fast the noise
+  // pattern itself evolves over time, independent of Wave Frequency's
+  // spatial scale. Lets the "Sync to Noise" color-speed toggle in sketch.ts
+  // mirror this rate onto colorSpeedMultiplier (strand.ts).
+  setSpeedMultiplier(value: number): void {
+    this.#speedMultiplier = value;
+  }
+
   noiseStep(flag: "Increasing" | "Decreasing", deltaTime: number): void {
     if (flag === "Increasing" && warpFactor < this.#maxWarpFactor) {
       const current = sigmoid(this.#warpProgress);
@@ -58,7 +67,7 @@ export class PerlinNoise {
       warpFactor -= current - next;
     }
 
-    this.#angle += this.#speedRadians * deltaTime;
+    this.#angle += this.#speedRadians * this.#speedMultiplier * deltaTime;
     this.#angle %= TWO_PI;
     z = R * Math.cos(this.#angle);
     w = R * Math.sin(this.#angle);

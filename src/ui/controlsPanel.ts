@@ -15,6 +15,28 @@ export interface SliderConfig {
   description?: string;
 }
 
+export interface ToggleConfig {
+  label: string;
+  initialValue: boolean;
+  onChange: (value: boolean) => void;
+  // Same hoverable info icon as SliderConfig.description.
+  description?: string;
+}
+
+// Returned by addSlider() so a caller can drive the slider programmatically -
+// e.g. mirroring one slider's value onto another when a toggle links them
+// (see sketch.ts's "Sync to Noise" toggle), without that caller reaching
+// into the panel's DOM directly.
+export interface SliderHandle {
+  // Updates the input, decimals-formatted readout, and drag handle position -
+  // deliberately does NOT invoke the slider's own onChange, since the caller
+  // mirroring a value has already applied whatever effect it implies.
+  setValue(value: number): void;
+  // Disables the input and dims the row - used while a linked value is
+  // being driven by something else, so it's clear this slider is inert.
+  setEnabled(enabled: boolean): void;
+}
+
 // Generic toggleable panel of labeled sliders, grouped into tabs -
 // deliberately knows nothing about what any individual slider controls
 // (that mapping lives with each caller's onChange), so adding the next
@@ -70,7 +92,7 @@ export class ControlsPanel {
     this.#currentSection = section;
   }
 
-  addSlider(config: SliderConfig): void {
+  addSlider(config: SliderConfig): SliderHandle {
     if (!this.#currentSection)
       throw new Error("addSlider() called before any addGroup()");
 
@@ -112,6 +134,51 @@ export class ControlsPanel {
     labelRow.append(labelText, valueText);
 
     row.append(labelRow, input);
+    this.#currentSection.appendChild(row);
+
+    return {
+      setValue(value) {
+        input.value = String(value);
+        valueText.textContent = value.toFixed(decimals);
+      },
+      setEnabled(enabled) {
+        input.disabled = !enabled;
+        row.classList.toggle("controls-panel__row--disabled", !enabled);
+      },
+    };
+  }
+
+  addToggle(config: ToggleConfig): void {
+    if (!this.#currentSection)
+      throw new Error("addToggle() called before any addGroup()");
+
+    const row = document.createElement("label");
+    row.className = "controls-panel__row controls-panel__row--toggle";
+
+    const labelText = document.createElement("span");
+    labelText.className = "controls-panel__label";
+    labelText.textContent = config.label;
+
+    if (config.description) {
+      const info = document.createElement("span");
+      info.className = "controls-panel__info";
+      info.textContent = "ⓘ";
+      info.title = config.description;
+      labelText.append(" ", info);
+    }
+
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.checked = config.initialValue;
+    input.addEventListener("change", () => {
+      config.onChange(input.checked);
+    });
+
+    const labelRow = document.createElement("div");
+    labelRow.className = "controls-panel__label-row";
+    labelRow.append(labelText, input);
+
+    row.append(labelRow);
     this.#currentSection.appendChild(row);
   }
 

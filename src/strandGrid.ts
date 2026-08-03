@@ -82,6 +82,10 @@ export class StrandGrid {
     this.#perlinNoise.setWaveFrequency(value);
   }
 
+  setNoiseSpeedMultiplier(value: number): void {
+    this.#perlinNoise.setSpeedMultiplier(value);
+  }
+
   setGustFrequency(value: number): void {
     this.#warpProbability = value;
   }

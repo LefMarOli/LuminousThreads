@@ -64,6 +64,8 @@ new p5((p: p5) => {
   let gl: WebGL2RenderingContext;
   let renderer: Renderer;
   let controlsPanel: ControlsPanel;
+  let currentNoiseSpeed = 1;
+  let syncColorSpeedToNoise = false;
 
   // Constructor args the controls panel can change (Strand Spacing/Start
   // Hue/End Hue) - unlike most sliders these can't be pushed into an
@@ -176,6 +178,23 @@ new p5((p: p5) => {
         "How likely a random gust is to kick in every few seconds, independent of Gust Intensity's strength.",
       onChange: (value) => strandGrid.setGustFrequency(value),
     });
+    controlsPanel.addSlider({
+      label: "Noise Speed",
+      min: 0,
+      max: 3,
+      step: 0.1,
+      initialValue: 1,
+      description:
+        "How fast the underlying noise pattern itself evolves over time, independent of Wave Frequency's spatial scale.",
+      onChange: (value) => {
+        currentNoiseSpeed = value;
+        strandGrid.setNoiseSpeedMultiplier(value);
+        if (syncColorSpeedToNoise) {
+          setColorSpeedMultiplier(value);
+          colorSpeedSlider.setValue(value);
+        }
+      },
+    });
     controlsPanel.addGroup("Presence");
     controlsPanel.addSlider({
       label: "Vanish Frequency",
@@ -230,7 +249,7 @@ new p5((p: p5) => {
     });
 
     controlsPanel.addGroup("Color");
-    controlsPanel.addSlider({
+    const colorSpeedSlider = controlsPanel.addSlider({
       label: "Color Speed",
       min: 0,
       max: 3,
@@ -238,6 +257,20 @@ new p5((p: p5) => {
       initialValue: 1,
       description: "How fast each strand's hue drifts and cycles over time.",
       onChange: (value) => setColorSpeedMultiplier(value),
+    });
+    controlsPanel.addToggle({
+      label: "Sync to Noise",
+      initialValue: false,
+      description:
+        "Locks Color Speed to Noise Speed so hue drift always tracks how fast the wind pattern itself is moving.",
+      onChange: (value) => {
+        syncColorSpeedToNoise = value;
+        colorSpeedSlider.setEnabled(!value);
+        if (value) {
+          setColorSpeedMultiplier(currentNoiseSpeed);
+          colorSpeedSlider.setValue(currentNoiseSpeed);
+        }
+      },
     });
     controlsPanel.addSlider({
       label: "Fade Length",

@@ -90,3 +90,11 @@ canvas {
   color: #888;
   cursor: help;
 }
+
+.controls-panel__row--disabled {
+  opacity: 0.4;
+}
+
+.controls-panel__row--toggle .controls-panel__label-row {
+  align-items: center;
+}
