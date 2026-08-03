@@ -38,6 +38,11 @@ built with p5.js v2 + TypeScript + WebGL2, bundled with Vite.
   (`gl.*` calls directly against the real WebGL2 context).
 - Keep `npm run typecheck`, `npm run lint`, `npm run format`, and
   `npm run build` clean at all times.
+- Canvas/grid sizing must use `window.innerWidth`/`innerHeight` (the
+  actual viewport content area), never `outerWidth`/`outerHeight` (the
+  whole browser window including chrome) — the two silently diverge
+  outside of true fullscreen, which previously caused the canvas to size
+  against the wrong dimension.
 - Manually-disabled code (a call commented out rather than removed) is
   usually a pending controls-panel toggle, not abandoned dead code — the
   panel's intent is to progressively replace that pattern with real UI
