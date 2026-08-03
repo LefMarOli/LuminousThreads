@@ -82,11 +82,19 @@ export function setProbabilityPhaseShift(value: number): void {
 
 // Chance a newly-Exiting/Entering strand travels via "Top" rather than
 // "Bottom" (see #switchMode) - 0.5 is an even split; shared so a slider
-// change re-biases every strand's next roll immediately.
-let travelDirectionBias = 0.5;
+// change re-biases every strand's next roll immediately. Separate knobs for
+// each direction since a strand exiting toward the top vs. entering from
+// the top are independent creative choices (e.g. "always exit downward,
+// but enter from either end").
+let enteringDirectionBias = 0.5;
+let exitingDirectionBias = 0.5;
 
-export function setTravelDirectionBias(value: number): void {
-  travelDirectionBias = value;
+export function setEnteringDirectionBias(value: number): void {
+  enteringDirectionBias = value;
+}
+
+export function setExitingDirectionBias(value: number): void {
+  exitingDirectionBias = value;
 }
 
 // Selects what #segmentHueAlpha uses as its 0-1 position along the
@@ -346,7 +354,7 @@ export class Strand {
   #switchMode(): void {
     if (this.#mode === "Normal" && Math.random() < this.#exitingProbability) {
       this.#mode = "Exiting";
-      if (Math.random() < travelDirectionBias) {
+      if (Math.random() < exitingDirectionBias) {
         this.#travelDirection = "Top";
         this.#travelPos = -travelTrailSize;
       } else {
@@ -358,7 +366,7 @@ export class Strand {
       Math.random() < this.#enteringProbability
     ) {
       this.#mode = "Entering";
-      if (Math.random() < travelDirectionBias) {
+      if (Math.random() < enteringDirectionBias) {
         this.#travelDirection = "Top";
         this.#travelPos = 0;
       } else {

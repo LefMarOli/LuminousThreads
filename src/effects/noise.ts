@@ -8,7 +8,6 @@ let w!: number;
 let R!: number;
 let Simplex!: SimplexNoise;
 const minWarpFactor = 1.0;
-const warpDelay = 1 / 1000;
 let warpFactor: number = 1;
 
 export class PerlinNoise {
@@ -21,6 +20,12 @@ export class PerlinNoise {
   #noiseScaleX = 0.005;
   #noiseScaleY = 0.005;
   #speedMultiplier = 1;
+  // Scales #warpProgress's per-frame increment in noiseStep below - how
+  // quickly warpFactor's sigmoid ramp climbs toward #maxWarpFactor once a
+  // gust starts, i.e. the gust's "acceleration". Was a fixed module
+  // constant; now a live setter so it's tunable the same as the rest of
+  // the gust system.
+  #gustRampRate = 1 / 1000;
 
   constructor(seed: number, loopTime: number, fft?: unknown) {
     Simplex = new SimplexNoise(seed ?? Math.random);
@@ -44,6 +49,24 @@ export class PerlinNoise {
   setWaveFrequency(value: number): void {
     this.#noiseScaleX = value;
     this.#noiseScaleY = value;
+  }
+
+  setGustRampRate(value: number): void {
+    this.#gustRampRate = value;
+  }
+
+  // Recomputes #speedRadians for a new noise-space loop period, independent
+  // of the strand-side loopDuration (Strand's own entering/exiting cycle and
+  // color speed) that this constructor originally shared it with.
+  setLoopDuration(value: number): void {
+    this.#speedRadians = TWO_PI / (value * 1000);
+  }
+
+  // Directly overrides R (the radius of the circular path the (z, w) sample
+  // point travels along) - a live-tunable counterpart to the value the
+  // constructor derives once from loopTime.
+  setPathRadius(value: number): void {
+    R = value;
   }
 
   // Multiplies #speedRadians below - a shared knob for how fast the noise
@@ -73,12 +96,12 @@ export class PerlinNoise {
 
     if (flag === "Increasing" && warpFactor < this.#maxWarpFactor) {
       const current = sigmoid(this.#warpProgress);
-      this.#warpProgress += scaledDeltaTime * warpDelay;
+      this.#warpProgress += scaledDeltaTime * this.#gustRampRate;
       const next = sigmoid(this.#warpProgress);
       warpFactor += next - current;
     } else if (flag === "Decreasing" && warpFactor > minWarpFactor) {
       const current = sigmoid(this.#warpProgress);
-      this.#warpProgress -= scaledDeltaTime * warpDelay;
+      this.#warpProgress -= scaledDeltaTime * this.#gustRampRate;
       const next = sigmoid(this.#warpProgress);
       warpFactor -= current - next;
     }

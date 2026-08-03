@@ -1,3 +1,5 @@
+import { hueToHex } from "../color/hueToHex";
+
 export interface SliderConfig {
   label: string;
   min: number;
@@ -13,6 +15,14 @@ export interface SliderConfig {
   // browser's native title tooltip rather than a custom-positioned one -
   // this project's own "minimal DOM, no extra machinery" pattern.
   description?: string;
+  // Small captions under the track's two ends (e.g. ["Bottom", "Top"]) -
+  // for a slider whose min/max map to a named direction/state rather than a
+  // number that's meaningful on its own.
+  endLabels?: [string, string];
+  // Treats the value as a 0-360 hue and replaces the plain numeric readout
+  // with a small color swatch + hex code - for hue sliders (Start Hue/End
+  // Hue) where a raw number doesn't tell you what the color actually is.
+  swatch?: boolean;
 }
 
 export interface ToggleConfig {
@@ -115,7 +125,27 @@ export class ControlsPanel {
 
     const valueText = document.createElement("span");
     valueText.className = "controls-panel__value";
-    valueText.textContent = config.initialValue.toFixed(decimals);
+
+    let swatchEl: HTMLSpanElement | undefined;
+    let hexText: HTMLSpanElement | undefined;
+    if (config.swatch) {
+      valueText.classList.add("controls-panel__value--swatch");
+      swatchEl = document.createElement("span");
+      swatchEl.className = "controls-panel__swatch";
+      hexText = document.createElement("span");
+      valueText.append(swatchEl, hexText);
+    }
+
+    function renderValue(value: number): void {
+      if (config.swatch && swatchEl && hexText) {
+        const hex = hueToHex(value);
+        swatchEl.style.backgroundColor = hex;
+        hexText.textContent = hex;
+      } else {
+        valueText.textContent = value.toFixed(decimals);
+      }
+    }
+    renderValue(config.initialValue);
 
     const input = document.createElement("input");
     input.type = "range";
@@ -125,7 +155,7 @@ export class ControlsPanel {
     input.value = String(config.initialValue);
     input.addEventListener("input", () => {
       const value = Number(input.value);
-      valueText.textContent = value.toFixed(decimals);
+      renderValue(value);
       config.onChange(value);
     });
 
@@ -134,12 +164,25 @@ export class ControlsPanel {
     labelRow.append(labelText, valueText);
 
     row.append(labelRow, input);
+
+    if (config.endLabels) {
+      const endLabelsRow = document.createElement("div");
+      endLabelsRow.className = "controls-panel__end-labels";
+      const [minLabel, maxLabel] = config.endLabels;
+      const minSpan = document.createElement("span");
+      minSpan.textContent = minLabel;
+      const maxSpan = document.createElement("span");
+      maxSpan.textContent = maxLabel;
+      endLabelsRow.append(minSpan, maxSpan);
+      row.append(endLabelsRow);
+    }
+
     this.#currentSection.appendChild(row);
 
     return {
       setValue(value) {
         input.value = String(value);
-        valueText.textContent = value.toFixed(decimals);
+        renderValue(value);
       },
       setEnabled(enabled) {
         input.disabled = !enabled;

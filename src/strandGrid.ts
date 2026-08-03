@@ -15,6 +15,7 @@ export class StrandGrid {
   #perlinNoise: PerlinNoise;
   #warpState: "Increasing" | "Decreasing" = "Decreasing";
   #warpProbability = 0.5;
+  #gustDuration = 3000;
   #warpIntervalId: ReturnType<typeof setInterval>;
 
   constructor(
@@ -65,7 +66,7 @@ export class StrandGrid {
     this.#warpIntervalId = setInterval(() => {
       if (Math.random() < this.#warpProbability) {
         this.#warpState = "Increasing";
-        setTimeout(() => (this.#warpState = "Decreasing"), 3000);
+        setTimeout(() => (this.#warpState = "Decreasing"), this.#gustDuration);
       }
     }, 3 * 1000);
   }
@@ -92,6 +93,22 @@ export class StrandGrid {
 
   setGustFrequency(value: number): void {
     this.#warpProbability = value;
+  }
+
+  setGustDuration(value: number): void {
+    this.#gustDuration = value;
+  }
+
+  setGustRampRate(value: number): void {
+    this.#perlinNoise.setGustRampRate(value);
+  }
+
+  setNoiseLoopDuration(value: number): void {
+    this.#perlinNoise.setLoopDuration(value);
+  }
+
+  setNoisePathRadius(value: number): void {
+    this.#perlinNoise.setPathRadius(value);
   }
 
   // Per-strand CPU state update (mode/travel/hue) - the WebGL renderer
