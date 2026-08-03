@@ -17,6 +17,10 @@ import {
   setColorSpeedMultiplier,
   setFadePercentage,
   setPeakProbability,
+  setTravelTrailSize,
+  setTravelSpeedMultiplier,
+  setProbabilityPhaseShift,
+  setTravelDirectionBias,
 } from "./strand";
 
 // Sound-reactive visuals aren't actually wired into any rendering yet -
@@ -172,6 +176,7 @@ new p5((p: p5) => {
         "How likely a random gust is to kick in every few seconds, independent of Gust Intensity's strength.",
       onChange: (value) => strandGrid.setGustFrequency(value),
     });
+    controlsPanel.addGroup("Presence");
     controlsPanel.addSlider({
       label: "Vanish Frequency",
       min: 0,
@@ -182,6 +187,46 @@ new p5((p: p5) => {
       description:
         "How often a strand randomly travels off-screen and reappears elsewhere in its cycle. Zero keeps every strand always present.",
       onChange: (value) => setPeakProbability(value),
+    });
+    controlsPanel.addSlider({
+      label: "Travel Trail Size",
+      min: 5,
+      max: 100,
+      step: 5,
+      initialValue: 40,
+      description:
+        "How many vertices it takes a strand to fully fade in/out while entering or exiting - larger values make the reveal/vanish more gradual.",
+      onChange: (value) => setTravelTrailSize(value),
+    });
+    controlsPanel.addSlider({
+      label: "Travel Speed",
+      min: 0.25,
+      max: 3,
+      step: 0.05,
+      initialValue: 1,
+      description:
+        "Multiplier on how fast a strand travels across the screen once it starts entering or exiting.",
+      onChange: (value) => setTravelSpeedMultiplier(value),
+    });
+    controlsPanel.addSlider({
+      label: "Enter/Exit Phase Offset",
+      min: 0,
+      max: Math.PI * 2,
+      step: 0.05,
+      initialValue: Math.PI / 2,
+      description:
+        "Offsets the entering-probability cycle from the exiting-probability cycle - at 0 they're in lockstep, so a strand tends to re-enter right as another exits.",
+      onChange: (value) => setProbabilityPhaseShift(value),
+    });
+    controlsPanel.addSlider({
+      label: "Direction Bias",
+      min: 0,
+      max: 1,
+      step: 0.05,
+      initialValue: 0.5,
+      description:
+        "Chance a strand travels toward the top rather than the bottom when entering or exiting - 0.5 is an even split, 0 always bottom, 1 always top.",
+      onChange: (value) => setTravelDirectionBias(value),
     });
 
     controlsPanel.addGroup("Color");

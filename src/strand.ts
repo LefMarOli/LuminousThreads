@@ -51,6 +51,44 @@ export function setPeakProbability(value: number): void {
   peakProbability = value;
 }
 
+// How many vertices' worth of travel it takes for a strand to fully
+// fade in/out once Entering/Exiting - see #segmentBrightness. Shared across
+// strands for the same live-tuning reason as peakProbability.
+let travelTrailSize = 40;
+
+export function setTravelTrailSize(value: number): void {
+  travelTrailSize = value;
+}
+
+// Multiplies each strand's own #travelSpeed (computed once in the
+// constructor from loopDuration/interpolationPoints) - a single shared knob
+// to speed up or slow down the travel-reveal motion without needing to
+// recompute every strand's base speed.
+let travelSpeedMultiplier = 1;
+
+export function setTravelSpeedMultiplier(value: number): void {
+  travelSpeedMultiplier = value;
+}
+
+// Offsets the Entering probability's sine wave from the Exiting probability's
+// (see #updateTravel) - at the default PI/2 they're a quarter-cycle apart, so
+// strands tend to exit and re-enter at different points in the loop rather
+// than in lockstep.
+let probabilityPhaseShift = Math.PI / 2;
+
+export function setProbabilityPhaseShift(value: number): void {
+  probabilityPhaseShift = value;
+}
+
+// Chance a newly-Exiting/Entering strand travels via "Top" rather than
+// "Bottom" (see #switchMode) - 0.5 is an even split; shared so a slider
+// change re-biases every strand's next roll immediately.
+let travelDirectionBias = 0.5;
+
+export function setTravelDirectionBias(value: number): void {
+  travelDirectionBias = value;
+}
+
 export class Strand {
   pointsArray: Point[];
   initArray: Point[];
@@ -63,12 +101,10 @@ export class Strand {
   #minColorSpeed = 0.1;
   #mode: "Normal" | "Entering" | "Exiting" | "NoShow" = "Normal";
   #travelDirection: "Top" | "Bottom" = "Top";
-  #travelTrailSize = 40;
   #travelSpeed = 0.01;
   #travelPos!: number;
   #enteringProbability = peakProbability;
   #exitingProbability = 0;
-  #probabilityPhaseShift = Math.PI / 2;
   #loopDuration: number;
   #loopTimestamp = 0;
 
@@ -168,17 +204,18 @@ export class Strand {
       peakProbability * Math.sin(animationProgress * Math.PI);
     this.#enteringProbability =
       peakProbability *
-      Math.sin(animationProgress * Math.PI + this.#probabilityPhaseShift);
+      Math.sin(animationProgress * Math.PI + probabilityPhaseShift);
 
     if (this.#mode === "Normal" || this.#mode === "NoShow") return;
 
+    const travelSpeed = this.#travelSpeed * travelSpeedMultiplier;
     if (this.#travelDirection === "Top") {
-      this.#travelPos += this.#travelSpeed * deltaTime;
-      if (this.#travelPos >= this.#interpolationPoints + this.#travelTrailSize)
+      this.#travelPos += travelSpeed * deltaTime;
+      if (this.#travelPos >= this.#interpolationPoints + travelTrailSize)
         this.#mode = this.#mode === "Entering" ? "Normal" : "NoShow";
     } else if (this.#travelDirection === "Bottom") {
-      this.#travelPos -= this.#travelSpeed * deltaTime;
-      if (this.#travelPos <= -this.#travelTrailSize)
+      this.#travelPos -= travelSpeed * deltaTime;
+      if (this.#travelPos <= -travelTrailSize)
         this.#mode = this.#mode === "Entering" ? "Normal" : "NoShow";
     }
   }
@@ -194,7 +231,7 @@ export class Strand {
           this.#travelDirection === "Top"
             ? this.#travelPos - index
             : index - this.#travelPos;
-        factor /= this.#travelTrailSize;
+        factor /= travelTrailSize;
         return Math.min(Math.max(factor, 0), 1);
       }
       case "Exiting": {
@@ -202,7 +239,7 @@ export class Strand {
           this.#travelDirection === "Top"
             ? index - this.#travelPos
             : this.#travelPos - index;
-        factor /= this.#travelTrailSize;
+        factor /= travelTrailSize;
         return Math.min(Math.max(factor, 0), 1);
       }
       default:
@@ -266,19 +303,19 @@ export class Strand {
   #switchMode(): void {
     if (this.#mode === "Normal" && Math.random() < this.#exitingProbability) {
       this.#mode = "Exiting";
-      if (Math.random() > 0.5) {
+      if (Math.random() < travelDirectionBias) {
         this.#travelDirection = "Top";
-        this.#travelPos = -this.#travelTrailSize;
+        this.#travelPos = -travelTrailSize;
       } else {
         this.#travelDirection = "Bottom";
-        this.#travelPos = this.#interpolationPoints + this.#travelTrailSize;
+        this.#travelPos = this.#interpolationPoints + travelTrailSize;
       }
     } else if (
       this.#mode === "NoShow" &&
       Math.random() < this.#enteringProbability
     ) {
       this.#mode = "Entering";
-      if (Math.random() > 0.5) {
+      if (Math.random() < travelDirectionBias) {
         this.#travelDirection = "Top";
         this.#travelPos = 0;
       } else {
