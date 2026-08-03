@@ -27,6 +27,11 @@ export class PerlinNoise {
   // the decay. Kept off 0/1 by the controls panel's slider bounds so the
   // divisions in noiseStep below never see a zero-width phase.
   #gustAttackFraction = 0.15;
+  // How sharply the attack accelerates into its peak - a traditional
+  // exponential growth curve, slow at first then ramping up, mirroring the
+  // decay's shape (exponential, rescaled to hit its endpoint exactly) but
+  // rising instead of falling. Must stay > 0 (see noiseStep below).
+  #gustAttackSharpness = 4;
   // How sharply the decay phase initially drops before its long tail -
   // higher values feel snappier, lower values feel more gradual. Must stay
   // > 0 (see noiseStep below).
@@ -62,6 +67,10 @@ export class PerlinNoise {
 
   setGustAttackFraction(value: number): void {
     this.#gustAttackFraction = value;
+  }
+
+  setGustAttackSharpness(value: number): void {
+    this.#gustAttackSharpness = value;
   }
 
   setGustDecaySharpness(value: number): void {
@@ -128,19 +137,21 @@ export class PerlinNoise {
       }
     }
 
-    // Attack/decay splice: a quick smoothstep rise over the first
-    // #gustAttackFraction of the gust, then an exponential decay over the
-    // rest - rescaled (subtracting its own tail-at-1 and renormalizing) so
-    // it reaches exactly 0 at gustProgress == 1 instead of only approaching
-    // it asymptotically. Gives a fast attack and a slow, deliberate decay
-    // back to rest, unlike the sine hump's symmetric rise and fall.
+    // Attack/decay splice: an exponential *growth* rise over the first
+    // #gustAttackFraction of the gust (slow at first, ramping up into the
+    // peak), then an exponential *decay* over the rest (fast initial drop,
+    // long trailing tail) - both rescaled (dividing out their own value at
+    // the far end and renormalizing) so they land exactly on 0/1 at their
+    // boundaries instead of only approaching them asymptotically.
     const gustProgress = this.#gustActive
       ? this.#gustElapsed / this.#gustDuration
       : 0;
     let rampShape: number;
     if (gustProgress <= this.#gustAttackFraction) {
       const attackProgress = gustProgress / this.#gustAttackFraction;
-      rampShape = attackProgress * attackProgress * (3 - 2 * attackProgress);
+      const raw = Math.exp(this.#gustAttackSharpness * attackProgress) - 1;
+      const peak = Math.exp(this.#gustAttackSharpness) - 1;
+      rampShape = raw / peak;
     } else {
       const decayProgress =
         (gustProgress - this.#gustAttackFraction) /

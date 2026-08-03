@@ -218,6 +218,17 @@ new p5((p: p5) => {
       onChange: (value) => strandGrid.setGustAttackFraction(value),
     });
     controlsPanel.addSlider({
+      label: "Gust Attack Sharpness",
+      min: 0.5,
+      max: 10,
+      step: 0.5,
+      initialValue: 4,
+      decimals: 1,
+      description:
+        "How much a gust's rise accelerates into its peak - low values ramp up almost steadily, high values stay slow at first then rush the last stretch to peak intensity.",
+      onChange: (value) => strandGrid.setGustAttackSharpness(value),
+    });
+    controlsPanel.addSlider({
       label: "Gust Decay Sharpness",
       min: 0.5,
       max: 10,

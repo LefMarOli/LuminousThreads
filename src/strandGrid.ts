@@ -106,6 +106,10 @@ export class StrandGrid {
     this.#perlinNoise.setGustAttackFraction(value);
   }
 
+  setGustAttackSharpness(value: number): void {
+    this.#perlinNoise.setGustAttackSharpness(value);
+  }
+
   setGustDecaySharpness(value: number): void {
     this.#perlinNoise.setGustDecaySharpness(value);
   }
