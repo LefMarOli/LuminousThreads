@@ -23,6 +23,14 @@ export class PerlinNoise {
   // meaningful while #gustActive; reset whenever a gust starts or finishes.
   #gustElapsed = 0;
   #gustActive = false;
+  // Fraction of #gustDuration spent on the attack (ramping up) - the rest is
+  // the decay. Kept off 0/1 by the controls panel's slider bounds so the
+  // divisions in noiseStep below never see a zero-width phase.
+  #gustAttackFraction = 0.15;
+  // How sharply the decay phase initially drops before its long tail -
+  // higher values feel snappier, lower values feel more gradual. Must stay
+  // > 0 (see noiseStep below).
+  #gustDecaySharpness = 4;
 
   constructor(seed: number, loopTime: number, fft?: unknown) {
     Simplex = new SimplexNoise(seed ?? Math.random);
@@ -50,6 +58,14 @@ export class PerlinNoise {
 
   setGustDuration(value: number): void {
     this.#gustDuration = value;
+  }
+
+  setGustAttackFraction(value: number): void {
+    this.#gustAttackFraction = value;
+  }
+
+  setGustDecaySharpness(value: number): void {
+    this.#gustDecaySharpness = value;
   }
 
   isGustActive(): boolean {
@@ -112,16 +128,29 @@ export class PerlinNoise {
       }
     }
 
-    // A single sine hump spanning the whole gust: 0 at both ends, 1 at the
-    // midpoint - ramps up then straight back down with no flat plateau in
-    // between, and Gust Duration alone controls how long that takes (no
-    // separate ramp-rate/acceleration knob).
+    // Attack/decay splice: a quick smoothstep rise over the first
+    // #gustAttackFraction of the gust, then an exponential decay over the
+    // rest - rescaled (subtracting its own tail-at-1 and renormalizing) so
+    // it reaches exactly 0 at gustProgress == 1 instead of only approaching
+    // it asymptotically. Gives a fast attack and a slow, deliberate decay
+    // back to rest, unlike the sine hump's symmetric rise and fall.
     const gustProgress = this.#gustActive
       ? this.#gustElapsed / this.#gustDuration
       : 0;
+    let rampShape: number;
+    if (gustProgress <= this.#gustAttackFraction) {
+      const attackProgress = gustProgress / this.#gustAttackFraction;
+      rampShape = attackProgress * attackProgress * (3 - 2 * attackProgress);
+    } else {
+      const decayProgress =
+        (gustProgress - this.#gustAttackFraction) /
+        (1 - this.#gustAttackFraction);
+      const raw = Math.exp(-this.#gustDecaySharpness * decayProgress);
+      const tail = Math.exp(-this.#gustDecaySharpness);
+      rampShape = (raw - tail) / (1 - tail);
+    }
     warpFactor =
-      minWarpFactor +
-      (this.#maxWarpFactor - minWarpFactor) * Math.sin(Math.PI * gustProgress);
+      minWarpFactor + (this.#maxWarpFactor - minWarpFactor) * rampShape;
 
     this.#angle += this.#speedRadians * scaledDeltaTime;
     this.#angle %= TWO_PI;

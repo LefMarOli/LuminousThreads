@@ -204,8 +204,29 @@ new p5((p: p5) => {
       initialValue: 3000,
       decimals: 0,
       description:
-        "How long a gust takes overall, in milliseconds - it ramps up to peak intensity at the midpoint, then straight back down, with no flat hold in between.",
+        "How long a gust takes overall, in milliseconds - it rises fast to peak intensity, then decays back down, with no flat hold in between.",
       onChange: (value) => strandGrid.setGustDuration(value),
+    });
+    controlsPanel.addSlider({
+      label: "Gust Attack",
+      min: 0.05,
+      max: 0.9,
+      step: 0.05,
+      initialValue: 0.15,
+      description:
+        "How much of Gust Duration is spent rising to peak intensity - the rest is spent decaying back down. Low values feel like a sudden gust that lingers as it fades.",
+      onChange: (value) => strandGrid.setGustAttackFraction(value),
+    });
+    controlsPanel.addSlider({
+      label: "Gust Decay Sharpness",
+      min: 0.5,
+      max: 10,
+      step: 0.5,
+      initialValue: 4,
+      decimals: 1,
+      description:
+        "How sharply a gust drops right after its peak before trailing off - higher values feel snappier, lower values feel more gradual all the way down.",
+      onChange: (value) => strandGrid.setGustDecaySharpness(value),
     });
     controlsPanel.addSlider({
       label: "Noise Speed",
