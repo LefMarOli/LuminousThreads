@@ -55,19 +55,25 @@ export class PerlinNoise {
   }
 
   noiseStep(flag: "Increasing" | "Decreasing", deltaTime: number): void {
+    // Scaling deltaTime itself (rather than gating #angle alone) freezes the
+    // gust ramp too - without this, warpFactor kept animating az/aw (below)
+    // via the noise domain's z/w axis even at Noise Speed 0, since gusts run
+    // on their own timer independent of the angle's rotation.
+    const scaledDeltaTime = deltaTime * this.#speedMultiplier;
+
     if (flag === "Increasing" && warpFactor < this.#maxWarpFactor) {
       const current = sigmoid(this.#warpProgress);
-      this.#warpProgress += deltaTime * warpDelay;
+      this.#warpProgress += scaledDeltaTime * warpDelay;
       const next = sigmoid(this.#warpProgress);
       warpFactor += next - current;
     } else if (flag === "Decreasing" && warpFactor > minWarpFactor) {
       const current = sigmoid(this.#warpProgress);
-      this.#warpProgress -= deltaTime * warpDelay;
+      this.#warpProgress -= scaledDeltaTime * warpDelay;
       const next = sigmoid(this.#warpProgress);
       warpFactor -= current - next;
     }
 
-    this.#angle += this.#speedRadians * this.#speedMultiplier * deltaTime;
+    this.#angle += this.#speedRadians * scaledDeltaTime;
     this.#angle %= TWO_PI;
     z = R * Math.cos(this.#angle);
     w = R * Math.sin(this.#angle);
