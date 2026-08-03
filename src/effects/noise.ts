@@ -48,10 +48,20 @@ export class PerlinNoise {
 
   // Multiplies #speedRadians below - a shared knob for how fast the noise
   // pattern itself evolves over time, independent of Wave Frequency's
-  // spatial scale. Lets the "Sync to Noise" color-speed toggle in sketch.ts
-  // mirror this rate onto colorSpeedMultiplier (strand.ts).
+  // spatial scale.
   setSpeedMultiplier(value: number): void {
     this.#speedMultiplier = value;
+  }
+
+  // The actual current rate the (az, aw) sample point is moving through the
+  // noise domain - #speedMultiplier alone understates this during a gust,
+  // since warpFactor scales the same rotating (z, w) vector up before it's
+  // sampled (see noiseEffect below), making the domain move faster for the
+  // same angular step. Polled every frame by sketch.ts's "Sync to Noise"
+  // toggle so colorSpeedMultiplier (strand.ts) tracks gust bursts too, not
+  // just the slider's base value.
+  getCurrentSpeed(): number {
+    return this.#speedMultiplier * warpFactor;
   }
 
   noiseStep(flag: "Increasing" | "Decreasing", deltaTime: number): void {

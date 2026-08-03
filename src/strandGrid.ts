@@ -86,6 +86,10 @@ export class StrandGrid {
     this.#perlinNoise.setSpeedMultiplier(value);
   }
 
+  getNoiseCurrentSpeed(): number {
+    return this.#perlinNoise.getCurrentSpeed();
+  }
+
   setGustFrequency(value: number): void {
     this.#warpProbability = value;
   }

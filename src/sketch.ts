@@ -10,7 +10,7 @@ import { FileAudioSource } from "./audio/input/fileAudioSource";
 import { AudioAnalysis } from "./audio/audioAnalyzer";
 import { acquireGlContext } from "./gl/glContext";
 import { Renderer, DEFAULT_TRAIL_DECAY_AMOUNT } from "./gl/renderer";
-import { ControlsPanel } from "./ui/controlsPanel";
+import { ControlsPanel, type SliderHandle } from "./ui/controlsPanel";
 import { userStartAudio } from "./audio/p5Sound";
 import { setStiffnessCoefficient } from "./effects/stiffness";
 import {
@@ -66,7 +66,7 @@ new p5((p: p5) => {
   let gl: WebGL2RenderingContext;
   let renderer: Renderer;
   let controlsPanel: ControlsPanel;
-  let currentNoiseSpeed = 1;
+  let colorSpeedSlider: SliderHandle;
   let syncColorSpeedToNoise = false;
 
   // Constructor args the controls panel can change (Strand Spacing/Start
@@ -188,14 +188,7 @@ new p5((p: p5) => {
       initialValue: 1,
       description:
         "How fast the underlying noise pattern itself evolves over time, independent of Wave Frequency's spatial scale.",
-      onChange: (value) => {
-        currentNoiseSpeed = value;
-        strandGrid.setNoiseSpeedMultiplier(value);
-        if (syncColorSpeedToNoise) {
-          setColorSpeedMultiplier(value);
-          colorSpeedSlider.setValue(value);
-        }
-      },
+      onChange: (value) => strandGrid.setNoiseSpeedMultiplier(value),
     });
     controlsPanel.addGroup("Presence");
     controlsPanel.addSlider({
@@ -251,7 +244,7 @@ new p5((p: p5) => {
     });
 
     controlsPanel.addGroup("Color");
-    const colorSpeedSlider = controlsPanel.addSlider({
+    colorSpeedSlider = controlsPanel.addSlider({
       label: "Color Speed",
       min: 0,
       max: 3,
@@ -264,14 +257,10 @@ new p5((p: p5) => {
       label: "Sync to Noise",
       initialValue: false,
       description:
-        "Locks Color Speed to Noise Speed so hue drift always tracks how fast the wind pattern itself is moving.",
+        "Locks Color Speed to the noise pattern's actual current rate - including gust bursts - so hue drift always tracks how fast the wind pattern itself is moving.",
       onChange: (value) => {
         syncColorSpeedToNoise = value;
         colorSpeedSlider.setEnabled(!value);
-        if (value) {
-          setColorSpeedMultiplier(currentNoiseSpeed);
-          colorSpeedSlider.setValue(currentNoiseSpeed);
-        }
       },
     });
     controlsPanel.addSlider({
@@ -399,6 +388,15 @@ new p5((p: p5) => {
 
     strandGrid.move(p.deltaTime);
     strandGrid.update(p.deltaTime);
+
+    // Polled every frame (rather than only when the Noise Speed slider
+    // moves) so Color Speed keeps tracking the noise's actual current rate
+    // through a gust's ramp up/down too, not just its resting value.
+    if (syncColorSpeedToNoise) {
+      const noiseSpeed = strandGrid.getNoiseCurrentSpeed();
+      setColorSpeedMultiplier(noiseSpeed);
+      colorSpeedSlider.setValue(noiseSpeed);
+    }
     renderer.render(strandGrid);
   };
 
