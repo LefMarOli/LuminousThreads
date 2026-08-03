@@ -204,19 +204,8 @@ new p5((p: p5) => {
       initialValue: 3000,
       decimals: 0,
       description:
-        "How long a gust stays at its peak intensity, in milliseconds, before it starts easing back down.",
+        "How long a gust takes overall, in milliseconds - it ramps up to peak intensity at the midpoint, then straight back down, with no flat hold in between.",
       onChange: (value) => strandGrid.setGustDuration(value),
-    });
-    controlsPanel.addSlider({
-      label: "Gust Acceleration",
-      min: 0.0002,
-      max: 0.005,
-      step: 0.0002,
-      initialValue: 0.001,
-      decimals: 4,
-      description:
-        "How quickly a gust ramps up to its peak intensity (and eases back down) - higher values feel snappier, lower values feel more gradual.",
-      onChange: (value) => strandGrid.setGustRampRate(value),
     });
     controlsPanel.addSlider({
       label: "Noise Speed",

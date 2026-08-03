@@ -13,9 +13,7 @@ export class StrandGrid {
   strands: Strand[];
   numPoints: number;
   #perlinNoise: PerlinNoise;
-  #warpState: "Increasing" | "Decreasing" = "Decreasing";
   #warpProbability = 0.5;
-  #gustDuration = 3000;
   #warpIntervalId: ReturnType<typeof setInterval>;
 
   constructor(
@@ -63,10 +61,15 @@ export class StrandGrid {
 
     this.#perlinNoise = new PerlinNoise(17, loopDuration);
 
+    // Rolls every few seconds for a chance to start a gust - skipped while
+    // one's already running (see PerlinNoise.isGustActive()/triggerGust()),
+    // so this never interrupts or restarts a gust in progress.
     this.#warpIntervalId = setInterval(() => {
-      if (Math.random() < this.#warpProbability) {
-        this.#warpState = "Increasing";
-        setTimeout(() => (this.#warpState = "Decreasing"), this.#gustDuration);
+      if (
+        !this.#perlinNoise.isGustActive() &&
+        Math.random() < this.#warpProbability
+      ) {
+        this.#perlinNoise.triggerGust();
       }
     }, 3 * 1000);
   }
@@ -96,11 +99,7 @@ export class StrandGrid {
   }
 
   setGustDuration(value: number): void {
-    this.#gustDuration = value;
-  }
-
-  setGustRampRate(value: number): void {
-    this.#perlinNoise.setGustRampRate(value);
+    this.#perlinNoise.setGustDuration(value);
   }
 
   setNoiseLoopDuration(value: number): void {
@@ -118,7 +117,7 @@ export class StrandGrid {
   }
 
   move(deltaTime: number): void {
-    this.#perlinNoise.noiseStep(this.#warpState, deltaTime);
+    this.#perlinNoise.noiseStep(deltaTime);
     this.strands.forEach((strand) =>
       strand.move([this.#perlinNoise.noiseEffect, stiffnessEffect]),
     );

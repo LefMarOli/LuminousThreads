@@ -1,5 +1,4 @@
 import type { Strand } from "../strand";
-import { smoothstep } from "./smoothstep";
 import { SimplexNoise } from "./perlin4d";
 
 const TWO_PI = Math.PI * 2;
@@ -13,24 +12,17 @@ let warpFactor: number = 1;
 export class PerlinNoise {
   #speedRadians: number;
   #angle: number;
-  // Normalized 0-1 progress through the gust ramp - 0 at rest (warpFactor
-  // == minWarpFactor), 1 at full gust (warpFactor == #maxWarpFactor).
-  // Clamped at both ends (see noiseStep below), so unlike the logistic
-  // sigmoid this used to feed, warpFactor actually reaches its target and
-  // holds there instead of forever creeping toward it.
-  #warpProgress = 0;
   #fft: unknown;
   #noiseLevel = 10;
   #maxWarpFactor = 1.5;
   #noiseScaleX = 0.005;
   #noiseScaleY = 0.005;
   #speedMultiplier = 1;
-  // Scales #warpProgress's per-frame increment in noiseStep below - how
-  // quickly warpFactor ramps from minWarpFactor to #maxWarpFactor (and back)
-  // once a gust starts, i.e. the gust's "acceleration". Was a fixed module
-  // constant; now a live setter so it's tunable the same as the rest of
-  // the gust system.
-  #gustRampRate = 1 / 1000;
+  #gustDuration = 3000;
+  // How far (in ms) into the current gust noiseStep has advanced - only
+  // meaningful while #gustActive; reset whenever a gust starts or finishes.
+  #gustElapsed = 0;
+  #gustActive = false;
 
   constructor(seed: number, loopTime: number, fft?: unknown) {
     Simplex = new SimplexNoise(seed ?? Math.random);
@@ -56,8 +48,20 @@ export class PerlinNoise {
     this.#noiseScaleY = value;
   }
 
-  setGustRampRate(value: number): void {
-    this.#gustRampRate = value;
+  setGustDuration(value: number): void {
+    this.#gustDuration = value;
+  }
+
+  isGustActive(): boolean {
+    return this.#gustActive;
+  }
+
+  // Starts a gust from its beginning - StrandGrid's roll check only calls
+  // this while !isGustActive(), so it never interrupts/restarts one already
+  // in progress.
+  triggerGust(): void {
+    this.#gustActive = true;
+    this.#gustElapsed = 0;
   }
 
   // Recomputes #speedRadians for a new noise-space loop period, independent
@@ -92,21 +96,32 @@ export class PerlinNoise {
     return this.#speedMultiplier * warpFactor;
   }
 
-  noiseStep(flag: "Increasing" | "Decreasing", deltaTime: number): void {
-    // Scaling deltaTime itself (rather than gating #angle alone) freezes the
-    // gust ramp too - without this, warpFactor kept animating az/aw (below)
-    // via the noise domain's z/w axis even at Noise Speed 0, since gusts run
-    // on their own timer independent of the angle's rotation.
+  noiseStep(deltaTime: number): void {
+    // Scaling deltaTime itself (rather than gating the gust clock alone)
+    // freezes the gust too - without this, a gust kept animating az/aw
+    // (below) via the noise domain's z/w axis even at Noise Speed 0, since
+    // it used to run on its own real-time timer independent of the angle's
+    // rotation.
     const scaledDeltaTime = deltaTime * this.#speedMultiplier;
-    const rampDelta = scaledDeltaTime * this.#gustRampRate;
 
-    this.#warpProgress =
-      flag === "Increasing"
-        ? Math.min(this.#warpProgress + rampDelta, 1)
-        : Math.max(this.#warpProgress - rampDelta, 0);
+    if (this.#gustActive) {
+      this.#gustElapsed += scaledDeltaTime;
+      if (this.#gustElapsed >= this.#gustDuration) {
+        this.#gustActive = false;
+        this.#gustElapsed = 0;
+      }
+    }
+
+    // A single sine hump spanning the whole gust: 0 at both ends, 1 at the
+    // midpoint - ramps up then straight back down with no flat plateau in
+    // between, and Gust Duration alone controls how long that takes (no
+    // separate ramp-rate/acceleration knob).
+    const gustProgress = this.#gustActive
+      ? this.#gustElapsed / this.#gustDuration
+      : 0;
     warpFactor =
       minWarpFactor +
-      (this.#maxWarpFactor - minWarpFactor) * smoothstep(this.#warpProgress);
+      (this.#maxWarpFactor - minWarpFactor) * Math.sin(Math.PI * gustProgress);
 
     this.#angle += this.#speedRadians * scaledDeltaTime;
     this.#angle %= TWO_PI;
