@@ -88,6 +88,20 @@ new p5((p: p5) => {
   // (treble). Assigned once in setup(), then driven every frame from
   // p.draw() while audioAnalyzer is active (see setAudioReactive below).
   let strandWidthSlider: SliderHandle;
+  // Disabled (not driven) while audio reactivity is active - Gust Frequency
+  // governs the random gust timer, which setAudioReactive turns off
+  // entirely in that mode, so the slider would otherwise sit there having
+  // no observable effect.
+  let gustFrequencySlider: SliderHandle;
+  // Rebuilds the Noise tab's layer cards from whatever layers the current
+  // strandGrid actually has - assigned once in setup() (where the card-
+  // creation machinery lives, scoped to the Noise tab's GroupHandle), then
+  // called from rebuildStrandGrid() below. A fresh StrandGrid always starts
+  // with exactly one layer at id 0, so without this, any extra layers
+  // added via "+ Add Layer" would leave stale cards pointing at ids that no
+  // longer exist on the new grid after a resize (or any other rebuild-
+  // triggering slider).
+  let reconcileNoiseLayers: () => void;
 
   // BeatDetector lives inside whatever AudioAnalysis the "a" key last
   // constructed (see p.keyPressed) - a fresh one every capture session, with
@@ -169,6 +183,11 @@ new p5((p: p5) => {
     // random gusts don't come back alongside beat-triggered ones while
     // capture is active.
     setAudioReactive(audioAnalyzer !== undefined);
+
+    // The new StrandGrid also always starts with exactly one noise layer -
+    // rebuild the Noise tab's layer cards to match it, rather than leaving
+    // stale cards around for layers that no longer exist.
+    reconcileNoiseLayers();
   }
 
   // Hands gust triggering and Strand Width over to audio analysis (beat ->
@@ -179,6 +198,7 @@ new p5((p: p5) => {
   function setAudioReactive(active: boolean): void {
     strandGrid.setRandomGustEnabled(!active);
     strandWidthSlider.setEnabled(!active);
+    gustFrequencySlider.setEnabled(!active);
   }
 
   p.setup = () => {
@@ -310,8 +330,11 @@ new p5((p: p5) => {
       onClick: () => createLayerCard(strandGrid.addNoiseLayer()),
     });
 
-    strandGrid.getNoiseLayers().forEach(createLayerCard);
-
+    // Ahead of the initial layer-card population (and of reconcileNoiseLayers
+    // below, which always re-appends cards at the end of Noise's container)
+    // so layer cards consistently render below these, both on first load and
+    // after every rebuild-triggered reconciliation - rather than above them
+    // initially and below them from the first resize onward.
     Noise.addSlider({
       label: "Noise Loop Duration",
       min: 10,
@@ -340,6 +363,14 @@ new p5((p: p5) => {
       },
     });
 
+    strandGrid.getNoiseLayers().forEach(createLayerCard);
+
+    reconcileNoiseLayers = () => {
+      layerCards.forEach(({ group }) => group.remove());
+      layerCards.clear();
+      strandGrid.getNoiseLayers().forEach(createLayerCard);
+    };
+
     Gust.addSlider({
       label: "Gust Intensity",
       min: 1,
@@ -353,14 +384,14 @@ new p5((p: p5) => {
         strandGrid.setGustIntensity(value);
       },
     });
-    Gust.addSlider({
+    gustFrequencySlider = Gust.addSlider({
       label: "Gust Frequency",
       min: 0,
       max: 1,
       step: 0.05,
       initialValue: gustFrequency,
       description:
-        "How likely a random gust is to kick in every few seconds, independent of Gust Intensity's strength.",
+        "How likely a random gust is to kick in every few seconds, independent of Gust Intensity's strength. Has no effect while audio capture is driving gusts from detected beats instead.",
       onChange: (value) => {
         gustFrequency = value;
         strandGrid.setGustFrequency(value);

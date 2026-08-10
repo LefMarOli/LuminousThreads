@@ -125,6 +125,14 @@ export class AudioAnalysis {
 
     this.energy = (this.bass + this.mid + this.treble) / 3;
 
-    this.beat = this.#beatDetector.update(this.bass);
+    // max(), not an average across all three bands - averaging would dilute
+    // a band-specific spike by the two unrelated bands that didn't move
+    // (e.g. a hi-hat hit only shows up in treble; blending it with a flat
+    // bass/mid shrinks its relative rise well below what bass-only hits
+    // register at). max() lets whichever band is actually spiking register
+    // at full strength. Mid is left out - it carries mostly harmonic/vocal
+    // content rather than percussive transients, so including it would
+    // mostly just add noise to what the rolling average considers "normal".
+    this.beat = this.#beatDetector.update(Math.max(this.bass, this.treble));
   }
 }
