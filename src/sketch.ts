@@ -6,8 +6,7 @@ import {
   DEFAULT_BASE_END_HUE,
   type NoiseLayerInfo,
 } from "./strandGrid";
-import { MicAudioSource } from "./audio/input/micAudioSource";
-import { FileAudioSource } from "./audio/input/fileAudioSource";
+import { DisplayAudioSource } from "./audio/input/displayAudioSource";
 import { AudioAnalysis } from "./audio/audioAnalyzer";
 import { acquireGlContext } from "./gl/glContext";
 import { Renderer, DEFAULT_TRAIL_DECAY_AMOUNT } from "./gl/renderer";
@@ -17,7 +16,8 @@ import {
   type ButtonHandle,
   type RemovableGroupHandle,
 } from "./ui/controlsPanel";
-import { userStartAudio } from "./audio/p5Sound";
+import { FftOverlay } from "./ui/fftOverlay";
+import { userStartAudio, getAudioContext } from "./audio/p5Sound";
 import { setStiffnessCoefficient } from "./effects/stiffness";
 import {
   setColorSpeedMultiplier,
@@ -33,11 +33,12 @@ import {
 } from "./strand";
 
 // Sound-reactive visuals aren't actually wired into any rendering yet -
-// AudioAnalysis's output below only ever gets console.logged. Turned off
-// while focusing on visual work: running the full audio pipeline (mic
-// permission prompt, FFT, loading Tone.js) has its own real cost and isn't
-// needed for that right now. Flip back to true to re-enable.
-const AUDIO_ENABLED = false;
+// AudioAnalysis's output below only ever gets console.logged. Needs to stay
+// on to prototype DisplayAudioSource (press "a" once the sketch is running -
+// see p.keyPressed below): p5.sound itself (FFT/AudioIn/loadSound) only
+// loads when this is true, and getDisplayMedia can't be requested until a
+// real keypress fires anyway, so nothing forces it eagerly at startup.
+const AUDIO_ENABLED = true;
 
 // Bounds for the controls panel's trail-length slider. The underlying
 // renderer parameter is a decay *rate* (smaller = slower fade = longer
@@ -67,8 +68,9 @@ p5.disableFriendlyErrors = true; // disables FES
 // etc. onto `window` and this module reading/assigning window globals.
 new p5((p: p5) => {
   let strandGrid: StrandGrid;
-  let source: MicAudioSource | FileAudioSource | undefined;
+  let displaySource: DisplayAudioSource | undefined;
   let audioAnalyzer: AudioAnalysis | undefined;
+  let fftOverlay: FftOverlay | undefined;
   let maxVal = 0;
   let gl: WebGL2RenderingContext;
   let renderer: Renderer;
@@ -537,12 +539,10 @@ new p5((p: p5) => {
 
     if (AUDIO_ENABLED) {
       userStartAudio(p);
-
-      source = new MicAudioSource();
-      // source = new FileAudioSource(p, "music.mp3");
-
-      audioAnalyzer = new AudioAnalysis(source);
-      audioAnalyzer.start();
+      // Capture itself starts from the "a" key (see p.keyPressed) rather
+      // than here - getDisplayMedia() must run inside a real user gesture,
+      // and setup() runs on page load, not a click/keypress.
+      fftOverlay = new FftOverlay();
     }
   };
 
@@ -556,6 +556,8 @@ new p5((p: p5) => {
       }
 
       if (audioAnalyzer.beat) console.log("beat");
+
+      fftOverlay?.draw(audioAnalyzer.spectrum, audioAnalyzer.beat);
     }
 
     // @ts-expect-error - real p5 accepts calling this with no seed (re-seeds
@@ -580,6 +582,7 @@ new p5((p: p5) => {
   p.windowResized = () => {
     p.resizeCanvas(window.innerWidth, window.innerHeight);
     rebuildStrandGrid();
+    fftOverlay?.resize(window.innerWidth);
   };
 
   p.keyPressed = () => {
@@ -591,6 +594,27 @@ new p5((p: p5) => {
       renderer.toggleWireframe();
     } else if (p.key === "m") {
       controlsPanel.toggle();
+    } else if (p.key === "g" && AUDIO_ENABLED) {
+      fftOverlay?.toggle();
+    } else if (p.key === "a" && AUDIO_ENABLED) {
+      // Toggles DisplayAudioSource capture - pressing "a" again while
+      // active stops it (and drops the browser's "sharing" indicator)
+      // rather than requiring a reload.
+      if (audioAnalyzer) {
+        displaySource?.stop();
+        displaySource = undefined;
+        audioAnalyzer = undefined;
+      } else {
+        displaySource = new DisplayAudioSource(getAudioContext(p), () => {
+          // Picker denied/cancelled - undo the optimistic assignment below
+          // so "a" is a clean retry rather than "stop" a capture that
+          // never actually started.
+          displaySource = undefined;
+          audioAnalyzer = undefined;
+        });
+        audioAnalyzer = new AudioAnalysis(displaySource);
+        audioAnalyzer.start();
+      }
     }
   };
 });

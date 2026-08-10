@@ -15,6 +15,14 @@ import p5 from "p5";
 
 export interface P5FFT {
   analyzer: { getFrequencyOfIndex(index: number): number };
+  // A plain native GainNode, permanently wired into the FFT's internal
+  // Tone.js analyser chain once, in its constructor (`this.input.connect(
+  // toneInput)` in p5.sound's own source - not part of any documented
+  // public API, p5.sound ships no types at all). Feed a raw Web Audio node
+  // into the FFT by connecting INTO this (`sourceNode.connect(fft.input)`)
+  // - overwriting the property itself does nothing, since the constructor's
+  // connection already happened and nothing re-reads this reference again.
+  input: AudioNode;
   analyze(): Float32Array;
   waveform(): Float32Array;
   setInput(source: unknown): void;
@@ -48,4 +56,13 @@ export function loadSound(p: p5, path: string): P5SoundFile {
 export function userStartAudio(p: p5): Promise<void> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (p as any).userStartAudio();
+}
+
+// The single Web Audio context p5.sound creates and reuses internally -
+// needed to build a MediaStreamAudioSourceNode from a raw getDisplayMedia()
+// stream (see DisplayAudioSource) so it lands in the same audio graph as
+// everything else p5.sound drives.
+export function getAudioContext(p: p5): AudioContext {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (p as any).getAudioContext();
 }

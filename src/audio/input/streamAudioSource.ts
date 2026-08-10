@@ -1,16 +1,17 @@
 import type { P5FFT } from "../p5Sound";
 
 export class StreamAudioSource {
-  node: unknown;
+  #node: AudioNode;
 
-  constructor(audioContext: unknown, node: unknown) {
-    this.node = node;
+  constructor(node: AudioNode) {
+    this.#node = node;
   }
 
   connect(fft: P5FFT): void {
-    // `.input` isn't part of P5FFT's declared shape (see p5Sound.ts's comment).
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (fft as any).input = this.node;
+    // Connect INTO fft.input rather than overwrite it - see P5FFT.input's
+    // comment in p5Sound.ts for why assignment alone wouldn't route any
+    // audio anywhere.
+    this.#node.connect(fft.input);
   }
 
   start(): void {}

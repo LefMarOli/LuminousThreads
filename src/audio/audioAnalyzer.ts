@@ -3,6 +3,7 @@ import { BeatDetector } from "./beatDetector";
 import type { MicAudioSource } from "./input/micAudioSource";
 import type { FileAudioSource } from "./input/fileAudioSource";
 import type { StreamAudioSource } from "./input/streamAudioSource";
+import type { DisplayAudioSource } from "./input/displayAudioSource";
 import { createFFT, type P5FFT } from "./p5Sound";
 
 const FFT_SIZE = 1024;
@@ -55,7 +56,8 @@ export class AudioAnalysis {
   #midEnergyValue: EnergyValue;
   #trebleEnergyValue: EnergyValue;
   #beatDetector: BeatDetector;
-  #source: MicAudioSource | FileAudioSource | StreamAudioSource;
+  #source:
+    MicAudioSource | FileAudioSource | StreamAudioSource | DisplayAudioSource;
 
   bass: number;
   mid: number;
@@ -65,7 +67,10 @@ export class AudioAnalysis {
   waveform: Float32Array;
   beat: boolean;
 
-  constructor(source: MicAudioSource | FileAudioSource | StreamAudioSource) {
+  constructor(
+    source:
+      MicAudioSource | FileAudioSource | StreamAudioSource | DisplayAudioSource,
+  ) {
     this.#fft = createFFT(FFT_SIZE); // fftSize only now - the old smoothing arg is gone
     this.#bassRange = frequencyRangeToBinRange(this.#fft, 20, 140);
     this.#midRange = frequencyRangeToBinRange(this.#fft, 140, 2600);
