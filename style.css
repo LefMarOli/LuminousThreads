@@ -119,3 +119,75 @@ canvas {
 .controls-panel__row--toggle .controls-panel__label-row {
   align-items: center;
 }
+
+.controls-panel__subtabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 4px;
+}
+
+.controls-panel__subtab {
+  flex: 1;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #888;
+  font: inherit;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0 0 6px;
+  cursor: pointer;
+}
+
+.controls-panel__subtab--active {
+  color: #eee;
+  border-bottom-color: #eee;
+}
+
+.controls-panel__subsection {
+  display: none;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.controls-panel__subsection--active {
+  display: flex;
+}
+
+.controls-panel__group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+.controls-panel__group-header {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #aaa;
+}
+
+.controls-panel__button {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  color: #eee;
+  font: inherit;
+  font-size: 12px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.controls-panel__button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.controls-panel__button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}

@@ -4,13 +4,19 @@ import {
   StrandGrid,
   DEFAULT_BASE_START_HUE,
   DEFAULT_BASE_END_HUE,
+  type NoiseLayerInfo,
 } from "./strandGrid";
 import { MicAudioSource } from "./audio/input/micAudioSource";
 import { FileAudioSource } from "./audio/input/fileAudioSource";
 import { AudioAnalysis } from "./audio/audioAnalyzer";
 import { acquireGlContext } from "./gl/glContext";
 import { Renderer, DEFAULT_TRAIL_DECAY_AMOUNT } from "./gl/renderer";
-import { ControlsPanel, type SliderHandle } from "./ui/controlsPanel";
+import {
+  ControlsPanel,
+  type SliderHandle,
+  type ButtonHandle,
+  type RemovableGroupHandle,
+} from "./ui/controlsPanel";
 import { userStartAudio } from "./audio/p5Sound";
 import { setStiffnessCoefficient } from "./effects/stiffness";
 import {
@@ -143,28 +149,14 @@ new p5((p: p5) => {
 
     controlsPanel = new ControlsPanel();
 
-    controlsPanel.addGroup("Motion");
-    controlsPanel.addSlider({
-      label: "Sway Amount",
-      min: 0,
-      max: 30,
-      step: 1,
-      initialValue: 10,
-      description:
-        "How strongly strands wobble sideways from the noise-driven wind effect.",
-      onChange: (value) => strandGrid.setNoiseLevel(value),
-    });
-    controlsPanel.addSlider({
-      label: "Gust Intensity",
-      min: 1,
-      max: 3,
-      step: 0.1,
-      initialValue: 1.5,
-      description:
-        "How much the periodic random gusts amplify the sway on top of the base amount.",
-      onChange: (value) => strandGrid.setGustIntensity(value),
-    });
-    controlsPanel.addSlider({
+    const motion = controlsPanel.addGroup("Motion");
+    const { General, Noise, Gust } = motion.addSubTabs([
+      "General",
+      "Noise",
+      "Gust",
+    ]);
+
+    General.addSlider({
       label: "Spring Stiffness",
       min: 0.0001,
       max: 0.0015,
@@ -175,18 +167,111 @@ new p5((p: p5) => {
         "How snappy vs. loose strands spring back toward their resting position.",
       onChange: (value) => setStiffnessCoefficient(value),
     });
-    controlsPanel.addSlider({
-      label: "Wave Frequency",
-      min: 0.001,
-      max: 0.02,
-      step: 0.001,
-      initialValue: 0.005,
-      decimals: 3,
-      description:
-        "How tightly packed the noise-driven wave pattern looks along each strand, independent of Sway Amount's intensity.",
-      onChange: (value) => strandGrid.setWaveFrequency(value),
+
+    // Each noise layer gets its own removable card (Amplitude/Frequency/
+    // Speed); Layer 1 is pre-populated from strandGrid's actual defaults so
+    // the panel never drifts from the model. Seed differs per layer but
+    // isn't exposed here - see strandGrid.addNoiseLayer().
+    const MAX_NOISE_LAYERS = 6;
+    const layerCards = new Map<
+      number,
+      { group: RemovableGroupHandle; removeButton: ButtonHandle }
+    >();
+    function updateLayerButtonStates(): void {
+      addLayerButton.setEnabled(layerCards.size < MAX_NOISE_LAYERS);
+      const canRemove = layerCards.size > 1;
+      layerCards.forEach(({ removeButton }) =>
+        removeButton.setEnabled(canRemove),
+      );
+    }
+
+    function createLayerCard(info: NoiseLayerInfo): void {
+      const group = Noise.addRemovableGroup(`Layer ${info.id + 1}`);
+      group.addSlider({
+        label: "Amplitude",
+        min: 0,
+        max: 30,
+        step: 1,
+        initialValue: info.amplitude,
+        description:
+          "How strongly this layer wobbles strands sideways from the noise-driven wind effect.",
+        onChange: (value) => strandGrid.setLayerAmplitude(info.id, value),
+      });
+      group.addSlider({
+        label: "Frequency",
+        min: 0.001,
+        max: 0.02,
+        step: 0.001,
+        initialValue: info.frequency,
+        decimals: 3,
+        description:
+          "How tightly packed this layer's noise pattern looks along each strand, independent of its Amplitude.",
+        onChange: (value) => strandGrid.setLayerFrequency(info.id, value),
+      });
+      group.addSlider({
+        label: "Speed",
+        min: 0,
+        max: 3,
+        step: 0.1,
+        initialValue: info.speed,
+        description:
+          "How fast this layer's own noise pattern evolves over time, independent of its Frequency's spatial scale.",
+        onChange: (value) => strandGrid.setLayerSpeed(info.id, value),
+      });
+      const removeButton = group.addButton({
+        label: "Remove Layer",
+        onClick: () => {
+          strandGrid.removeNoiseLayer(info.id);
+          group.remove();
+          layerCards.delete(info.id);
+          updateLayerButtonStates();
+        },
+      });
+
+      layerCards.set(info.id, { group, removeButton });
+      updateLayerButtonStates();
+    }
+
+    const addLayerButton = Noise.addButton({
+      label: "+ Add Layer",
+      onClick: () => createLayerCard(strandGrid.addNoiseLayer()),
     });
-    controlsPanel.addSlider({
+
+    strandGrid.getNoiseLayers().forEach(createLayerCard);
+
+    Noise.addSlider({
+      label: "Noise Loop Duration",
+      min: 10,
+      max: 120,
+      step: 5,
+      initialValue: 50,
+      decimals: 0,
+      description:
+        "How many seconds every layer's noise pattern takes to complete one full cycle through its own space, independent of each layer's Speed.",
+      onChange: (value) => strandGrid.setNoiseLoopDuration(value),
+    });
+    Noise.addSlider({
+      label: "Noise Path Radius",
+      min: 0.5,
+      max: 10,
+      step: 0.5,
+      initialValue: 2,
+      description:
+        "How large a circular path every layer's noise pattern travels along in its own space - larger values sample more varied noise per cycle.",
+      onChange: (value) => strandGrid.setNoisePathRadius(value),
+    });
+
+    Gust.addSlider({
+      label: "Gust Intensity",
+      min: 1,
+      max: 3,
+      step: 0.1,
+      initialValue: 1.5,
+      description:
+        "How much the periodic random gusts amplify every layer's sway on top of its base amount.",
+      onChange: (value) => strandGrid.setGustIntensity(value),
+    });
+    Gust.addSlider({
       label: "Gust Frequency",
       min: 0,
       max: 1,
@@ -196,7 +281,7 @@ new p5((p: p5) => {
         "How likely a random gust is to kick in every few seconds, independent of Gust Intensity's strength.",
       onChange: (value) => strandGrid.setGustFrequency(value),
     });
-    controlsPanel.addSlider({
+    Gust.addSlider({
       label: "Gust Duration",
       min: 500,
       max: 8000,
@@ -207,7 +292,7 @@ new p5((p: p5) => {
         "How long a gust takes overall, in milliseconds - it rises fast to peak intensity, then decays back down, with no flat hold in between.",
       onChange: (value) => strandGrid.setGustDuration(value),
     });
-    controlsPanel.addSlider({
+    Gust.addSlider({
       label: "Gust Attack",
       min: 0.05,
       max: 0.9,
@@ -217,7 +302,7 @@ new p5((p: p5) => {
         "How much of Gust Duration is spent rising to peak intensity - the rest is spent decaying back down. Low values feel like a sudden gust that lingers as it fades.",
       onChange: (value) => strandGrid.setGustAttackFraction(value),
     });
-    controlsPanel.addSlider({
+    Gust.addSlider({
       label: "Gust Attack Sharpness",
       min: 0.5,
       max: 10,
@@ -228,7 +313,7 @@ new p5((p: p5) => {
         "How much a gust's rise accelerates into its peak - low values ramp up almost steadily, high values stay slow at first then rush the last stretch to peak intensity.",
       onChange: (value) => strandGrid.setGustAttackSharpness(value),
     });
-    controlsPanel.addSlider({
+    Gust.addSlider({
       label: "Gust Decay Sharpness",
       min: 0.5,
       max: 10,
@@ -239,37 +324,7 @@ new p5((p: p5) => {
         "How sharply a gust drops right after its peak before trailing off - higher values feel snappier, lower values feel more gradual all the way down.",
       onChange: (value) => strandGrid.setGustDecaySharpness(value),
     });
-    controlsPanel.addSlider({
-      label: "Noise Speed",
-      min: 0,
-      max: 3,
-      step: 0.1,
-      initialValue: 1,
-      description:
-        "How fast the underlying noise pattern itself evolves over time, independent of Wave Frequency's spatial scale.",
-      onChange: (value) => strandGrid.setNoiseSpeedMultiplier(value),
-    });
-    controlsPanel.addSlider({
-      label: "Noise Loop Duration",
-      min: 10,
-      max: 120,
-      step: 5,
-      initialValue: 50,
-      decimals: 0,
-      description:
-        "How many seconds the underlying noise pattern takes to complete one full cycle through its own space, independent of Noise Speed's multiplier.",
-      onChange: (value) => strandGrid.setNoiseLoopDuration(value),
-    });
-    controlsPanel.addSlider({
-      label: "Noise Path Radius",
-      min: 0.5,
-      max: 10,
-      step: 0.5,
-      initialValue: 2,
-      description:
-        "How large a circular path the noise pattern travels along in its own space - larger values sample more varied noise per cycle.",
-      onChange: (value) => strandGrid.setNoisePathRadius(value),
-    });
+
     controlsPanel.addGroup("Presence");
     controlsPanel.addSlider({
       label: "Vanish Frequency",
