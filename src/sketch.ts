@@ -115,6 +115,26 @@ new p5((p: p5) => {
   // too.
   const MARGIN = 10;
 
+  // Gust/global-noise sliders' current values - unlike gapX etc. above,
+  // these aren't StrandGrid constructor args, they're pushed into the
+  // *existing* instance via setGustIntensity() and friends. A rebuild
+  // replaces that instance with one built from its own hardcoded defaults
+  // (WindGust's own fields, #warpProbability, #loopDuration/#pathRadius),
+  // so without reapplying these afterward, every dragged Gust/Noise value
+  // would silently snap back to default on any resize (or Strand Spacing/
+  // Control Points/Interpolation Points/Start Hue/End Hue change) - which
+  // reads as gusts suddenly not matching whatever shape they'd been tuned
+  // to, e.g. a beat-triggered gust reverting to a multi-second ramp after
+  // being tuned down to a snappy one.
+  let gustIntensity = 1.5;
+  let gustFrequency = 0.5;
+  let gustDuration = 3000;
+  let gustAttackFraction = 0.15;
+  let gustAttackSharpness = 4;
+  let gustDecaySharpness = 4;
+  let noiseLoopDuration = 50;
+  let noisePathRadius = 2;
+
   function rebuildStrandGrid(): void {
     strandGrid.destroy();
     strandGrid = new StrandGrid(
@@ -128,6 +148,27 @@ new p5((p: p5) => {
       numInterpolationPoints,
     );
     renderer.resize(window.innerWidth, window.innerHeight, strandGrid);
+
+    // A fresh StrandGrid starts every Gust/global-noise parameter at its
+    // own hardcoded default - reapply whatever the controls panel had
+    // last set, or a resize (or any other rebuild-triggering slider) would
+    // silently undo all of this tuning, e.g. a gust tuned down to a snappy
+    // 50ms reverting to its 3000ms default right as the next beat fires.
+    strandGrid.setGustIntensity(gustIntensity);
+    strandGrid.setGustFrequency(gustFrequency);
+    strandGrid.setGustDuration(gustDuration);
+    strandGrid.setGustAttackFraction(gustAttackFraction);
+    strandGrid.setGustAttackSharpness(gustAttackSharpness);
+    strandGrid.setGustDecaySharpness(gustDecaySharpness);
+    strandGrid.setNoiseLoopDuration(noiseLoopDuration);
+    strandGrid.setNoisePathRadius(noisePathRadius);
+
+    // Every fresh StrandGrid also starts with its random gust timer
+    // running, regardless of whether audio reactivity had turned it off on
+    // the instance just destroyed above - reapply the current mode so
+    // random gusts don't come back alongside beat-triggered ones while
+    // capture is active.
+    setAudioReactive(audioAnalyzer !== undefined);
   }
 
   // Hands gust triggering and Strand Width over to audio analysis (beat ->
@@ -276,21 +317,27 @@ new p5((p: p5) => {
       min: 10,
       max: 120,
       step: 5,
-      initialValue: 50,
+      initialValue: noiseLoopDuration,
       decimals: 0,
       description:
         "How many seconds every layer's noise pattern takes to complete one full cycle through its own space, independent of each layer's Speed.",
-      onChange: (value) => strandGrid.setNoiseLoopDuration(value),
+      onChange: (value) => {
+        noiseLoopDuration = value;
+        strandGrid.setNoiseLoopDuration(value);
+      },
     });
     Noise.addSlider({
       label: "Noise Path Radius",
       min: 0.5,
       max: 10,
       step: 0.5,
-      initialValue: 2,
+      initialValue: noisePathRadius,
       description:
         "How large a circular path every layer's noise pattern travels along in its own space - larger values sample more varied noise per cycle.",
-      onChange: (value) => strandGrid.setNoisePathRadius(value),
+      onChange: (value) => {
+        noisePathRadius = value;
+        strandGrid.setNoisePathRadius(value);
+      },
     });
 
     Gust.addSlider({
@@ -298,63 +345,81 @@ new p5((p: p5) => {
       min: 1,
       max: 3,
       step: 0.1,
-      initialValue: 1.5,
+      initialValue: gustIntensity,
       description:
         "How much the periodic random gusts amplify every layer's sway on top of its base amount.",
-      onChange: (value) => strandGrid.setGustIntensity(value),
+      onChange: (value) => {
+        gustIntensity = value;
+        strandGrid.setGustIntensity(value);
+      },
     });
     Gust.addSlider({
       label: "Gust Frequency",
       min: 0,
       max: 1,
       step: 0.05,
-      initialValue: 0.5,
+      initialValue: gustFrequency,
       description:
         "How likely a random gust is to kick in every few seconds, independent of Gust Intensity's strength.",
-      onChange: (value) => strandGrid.setGustFrequency(value),
+      onChange: (value) => {
+        gustFrequency = value;
+        strandGrid.setGustFrequency(value);
+      },
     });
     Gust.addSlider({
       label: "Gust Duration",
       min: 50,
       max: 8000,
       step: 50,
-      initialValue: 3000,
+      initialValue: gustDuration,
       decimals: 0,
       description:
         "How long a gust takes overall, in milliseconds - it rises fast to peak intensity, then decays back down, with no flat hold in between.",
-      onChange: (value) => strandGrid.setGustDuration(value),
+      onChange: (value) => {
+        gustDuration = value;
+        strandGrid.setGustDuration(value);
+      },
     });
     Gust.addSlider({
       label: "Gust Attack",
       min: 0.05,
       max: 0.9,
       step: 0.05,
-      initialValue: 0.15,
+      initialValue: gustAttackFraction,
       description:
         "How much of Gust Duration is spent rising to peak intensity - the rest is spent decaying back down. Low values feel like a sudden gust that lingers as it fades.",
-      onChange: (value) => strandGrid.setGustAttackFraction(value),
+      onChange: (value) => {
+        gustAttackFraction = value;
+        strandGrid.setGustAttackFraction(value);
+      },
     });
     Gust.addSlider({
       label: "Gust Attack Sharpness",
       min: 0.5,
       max: 10,
       step: 0.5,
-      initialValue: 4,
+      initialValue: gustAttackSharpness,
       decimals: 1,
       description:
         "How much a gust's rise accelerates into its peak - low values ramp up almost steadily, high values stay slow at first then rush the last stretch to peak intensity.",
-      onChange: (value) => strandGrid.setGustAttackSharpness(value),
+      onChange: (value) => {
+        gustAttackSharpness = value;
+        strandGrid.setGustAttackSharpness(value);
+      },
     });
     Gust.addSlider({
       label: "Gust Decay Sharpness",
       min: 0.5,
       max: 10,
       step: 0.5,
-      initialValue: 4,
+      initialValue: gustDecaySharpness,
       decimals: 1,
       description:
         "How sharply a gust drops right after its peak before trailing off - higher values feel snappier, lower values feel more gradual all the way down.",
-      onChange: (value) => strandGrid.setGustDecaySharpness(value),
+      onChange: (value) => {
+        gustDecaySharpness = value;
+        strandGrid.setGustDecaySharpness(value);
+      },
     });
 
     controlsPanel.addGroup("Presence");
