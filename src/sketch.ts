@@ -48,6 +48,12 @@ const AUDIO_ENABLED = true;
 const MIN_TRAIL_DECAY = 0.002; // longest trail
 const MAX_TRAIL_DECAY = 0.08; // shortest/crispest trail
 
+// Shared with the Rendering tab's Strand Width slider bounds below, so
+// treble-driven width (see p.draw) always stays in the same range manual
+// dragging would.
+const MIN_STRAND_WIDTH = 1;
+const MAX_STRAND_WIDTH = 8;
+
 // This is unrelated to instance vs global *sketch* mode below - it's how the
 // p5.sound addon package itself is implemented (a side-effect import that
 // extends the p5 prototype/statics), and it looks up the constructor via
@@ -77,6 +83,20 @@ new p5((p: p5) => {
   let controlsPanel: ControlsPanel;
   let colorSpeedSlider: SliderHandle;
   let syncColorSpeedToNoise = false;
+
+  // Audio reactivity's target - the Rendering tab's Strand Width slider
+  // (treble). Assigned once in setup(), then driven every frame from
+  // p.draw() while audioAnalyzer is active (see setAudioReactive below).
+  let strandWidthSlider: SliderHandle;
+
+  // BeatDetector lives inside whatever AudioAnalysis the "a" key last
+  // constructed (see p.keyPressed) - a fresh one every capture session, with
+  // its own defaults. These persist the controls panel's chosen values
+  // across that churn, reapplied to each new AudioAnalysis right after it's
+  // constructed, so adjusting Beat Sensitivity/Cooldown before ever pressing
+  // "a" still takes effect on the very first capture.
+  let beatSensitivity = 1.3;
+  let beatCooldown = 200;
 
   // Constructor args the controls panel can change (Strand Spacing/Start
   // Hue/End Hue/Control Points/Interpolation Points) - unlike most sliders
@@ -108,6 +128,16 @@ new p5((p: p5) => {
       numInterpolationPoints,
     );
     renderer.resize(window.innerWidth, window.innerHeight, strandGrid);
+  }
+
+  // Hands gust triggering and Strand Width over to audio analysis (beat ->
+  // gust, treble -> Strand Width) while capture is active - disables the
+  // random gust timer so beats are the only thing triggering gusts, and
+  // disables+syncs Strand Width the same way "Sync to Noise" already does
+  // for Color Speed, so it's clear it's driven, not stale.
+  function setAudioReactive(active: boolean): void {
+    strandGrid.setRandomGustEnabled(!active);
+    strandWidthSlider.setEnabled(!active);
   }
 
   p.setup = () => {
@@ -285,9 +315,9 @@ new p5((p: p5) => {
     });
     Gust.addSlider({
       label: "Gust Duration",
-      min: 500,
+      min: 50,
       max: 8000,
-      step: 250,
+      step: 50,
       initialValue: 3000,
       decimals: 0,
       description:
@@ -333,7 +363,7 @@ new p5((p: p5) => {
       min: 0,
       max: 0.05,
       step: 0.002,
-      initialValue: 0.01,
+      initialValue: 0,
       decimals: 3,
       description:
         "How often a strand randomly travels off-screen and reappears elsewhere in its cycle. Zero keeps every strand always present.",
@@ -469,10 +499,10 @@ new p5((p: p5) => {
     });
 
     controlsPanel.addGroup("Rendering");
-    controlsPanel.addSlider({
+    strandWidthSlider = controlsPanel.addSlider({
       label: "Strand Width",
-      min: 1,
-      max: 8,
+      min: MIN_STRAND_WIDTH,
+      max: MAX_STRAND_WIDTH,
       step: 0.5,
       initialValue: 3,
       description: "How thick the glowing strands render.",
@@ -543,6 +573,36 @@ new p5((p: p5) => {
       // than here - getDisplayMedia() must run inside a real user gesture,
       // and setup() runs on page load, not a click/keypress.
       fftOverlay = new FftOverlay();
+
+      const Audio = controlsPanel.addGroup("Audio");
+      Audio.addSlider({
+        label: "Beat Sensitivity",
+        min: 1,
+        max: 3,
+        step: 0.05,
+        initialValue: beatSensitivity,
+        decimals: 2,
+        description:
+          "How far above its own recent rolling average bass needs to jump to register as a beat - 1.3 means 30% above what's currently normal. Lower values catch more (subtler) beats; higher values only catch strong accents.",
+        onChange: (value) => {
+          beatSensitivity = value;
+          audioAnalyzer?.setBeatSensitivity(value);
+        },
+      });
+      Audio.addSlider({
+        label: "Beat Cooldown",
+        min: 0,
+        max: 1000,
+        step: 25,
+        initialValue: beatCooldown,
+        decimals: 0,
+        description:
+          "Minimum time (ms) between two detected beats - prevents one loud moment from registering as several beats in a row.",
+        onChange: (value) => {
+          beatCooldown = value;
+          audioAnalyzer?.setBeatCooldown(value);
+        },
+      });
     }
   };
 
@@ -555,7 +615,21 @@ new p5((p: p5) => {
         console.log(maxVal);
       }
 
-      if (audioAnalyzer.beat) console.log("beat");
+      if (audioAnalyzer.beat) {
+        console.log("beat");
+        strandGrid.triggerGust();
+      }
+
+      // Treble -> Strand Width - already 0-1 normalized (see AudioAnalysis),
+      // remapped onto the slider's own range so audio-driven values read
+      // the same as manual ones. The slider is disabled while this runs
+      // (setAudioReactive) but still updated so it visibly tracks what's
+      // actually happening.
+      const trebleWidth =
+        MIN_STRAND_WIDTH +
+        audioAnalyzer.treble * (MAX_STRAND_WIDTH - MIN_STRAND_WIDTH);
+      renderer.setStrandWidth(trebleWidth);
+      strandWidthSlider.setValue(trebleWidth);
 
       fftOverlay?.draw(audioAnalyzer.spectrum, audioAnalyzer.beat);
     }
@@ -604,6 +678,7 @@ new p5((p: p5) => {
         displaySource?.stop();
         displaySource = undefined;
         audioAnalyzer = undefined;
+        setAudioReactive(false);
       } else {
         displaySource = new DisplayAudioSource(getAudioContext(p), () => {
           // Picker denied/cancelled - undo the optimistic assignment below
@@ -611,9 +686,16 @@ new p5((p: p5) => {
           // never actually started.
           displaySource = undefined;
           audioAnalyzer = undefined;
+          setAudioReactive(false);
         });
         audioAnalyzer = new AudioAnalysis(displaySource);
+        // A fresh BeatDetector defaults every time - reapply whatever the
+        // controls panel had set, even if that happened before this very
+        // first capture.
+        audioAnalyzer.setBeatSensitivity(beatSensitivity);
+        audioAnalyzer.setBeatCooldown(beatCooldown);
         audioAnalyzer.start();
+        setAudioReactive(true);
       }
     }
   };

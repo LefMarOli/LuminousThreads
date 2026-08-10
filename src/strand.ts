@@ -45,7 +45,9 @@ export function setColorSpeedMultiplier(value: number): void {
 // Amplitude driving #switchMode()'s random Normal<->Exiting/NoShow<->Entering
 // rolls (see #updateTravel) - shared across strands so a slider change
 // takes effect on every strand immediately, same reasoning as fadePercentage.
-let peakProbability = 0.01;
+// Zero by default - strands stay present until the Vanish Frequency slider
+// is raised, matching its own default in sketch.ts.
+let peakProbability = 0;
 
 export function setPeakProbability(value: number): void {
   peakProbability = value;

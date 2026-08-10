@@ -82,7 +82,7 @@ export class AudioAnalysis {
     // bounds are a rough starting guess, not a calibrated value. Needs
     // retuning against real mic/file input (run `npm run dev` and adjust
     // until bass/mid/treble react sensibly).
-    this.#bassEnergyValue = new EnergyValue(0.15, 0.02, 0.3);
+    this.#bassEnergyValue = new EnergyValue(0.15, 0.002, 0.02);
     this.#midEnergyValue = new EnergyValue(0.1, 0.02, 0.3);
     this.#trebleEnergyValue = new EnergyValue(0.15, 0.02, 0.3);
     this.#beatDetector = new BeatDetector();
@@ -99,6 +99,14 @@ export class AudioAnalysis {
   start(): void {
     this.#source.connect(this.#fft);
     this.#source.start();
+  }
+
+  setBeatSensitivity(value: number): void {
+    this.#beatDetector.sensitivity = value;
+  }
+
+  setBeatCooldown(value: number): void {
+    this.#beatDetector.cooldown = value;
   }
 
   update(): void {

@@ -38,7 +38,7 @@ export class StrandGrid {
   // added layers just use the constructor's own loopTime-derived radius.
   #pathRadius?: number;
   #warpProbability = 0.5;
-  #warpIntervalId: ReturnType<typeof setInterval>;
+  #warpIntervalId?: ReturnType<typeof setInterval>;
 
   constructor(
     width: number,
@@ -85,18 +85,39 @@ export class StrandGrid {
 
     this.#loopDuration = loopDuration;
     this.#addLayer(17, 0.005, 10, 1);
+    this.#startRandomGustTimer();
+  }
 
-    // Rolls every few seconds for a chance to start a gust - skipped while
-    // one's already running (see WindGust.isGustActive()/triggerGust()), so
-    // this never interrupts or restarts a gust in progress.
+  // Rolls every few seconds for a chance to start a gust - triggerGust()
+  // itself is what skips the roll while one's already running, so this
+  // never interrupts or restarts a gust in progress.
+  #startRandomGustTimer(): void {
     this.#warpIntervalId = setInterval(() => {
-      if (
-        !this.#windGust.isGustActive() &&
-        Math.random() < this.#warpProbability
-      ) {
-        this.#windGust.triggerGust();
-      }
+      if (Math.random() < this.#warpProbability) this.triggerGust();
     }, 3 * 1000);
+  }
+
+  // Starts a gust "from the outside" - the random timer above, and audio
+  // reactivity's beat detection (see sketch.ts), share this single entry
+  // point so both get the same "never interrupt one already running"
+  // guard for free.
+  triggerGust(): void {
+    if (!this.#windGust.isGustActive()) this.#windGust.triggerGust();
+  }
+
+  // Lets audio reactivity take over gust triggering (via beat detection)
+  // without the random timer also firing gusts on top of it - re-enabling
+  // restores the original ambient behavior.
+  setRandomGustEnabled(enabled: boolean): void {
+    const isEnabled = this.#warpIntervalId !== undefined;
+    if (enabled === isEnabled) return;
+
+    if (enabled) {
+      this.#startRandomGustTimer();
+    } else {
+      clearInterval(this.#warpIntervalId);
+      this.#warpIntervalId = undefined;
+    }
   }
 
   #addLayer(
@@ -224,6 +245,6 @@ export class StrandGrid {
   // discarded instance's interval keeps firing forever and keeps its entire
   // strand/vertex graph alive via closure, leaking on every resize.
   destroy(): void {
-    clearInterval(this.#warpIntervalId);
+    if (this.#warpIntervalId !== undefined) clearInterval(this.#warpIntervalId);
   }
 }
