@@ -88,21 +88,29 @@ export class StrandGrid {
     this.#startRandomGustTimer();
   }
 
-  // Rolls every few seconds for a chance to start a gust - triggerGust()
-  // itself is what skips the roll while one's already running, so this
-  // never interrupts or restarts a gust in progress.
+  // Rolls every few seconds for a chance to start a gust - skips the roll
+  // entirely while one's already running, so the ambient timer never
+  // interrupts or restarts a gust in progress. This guard lives here
+  // (rather than in triggerGust() itself) because it's specific to this
+  // caller: "roll again in 3s" isn't a real event worth restarting a gust
+  // for, unlike a beat (see triggerGust() below).
   #startRandomGustTimer(): void {
     this.#warpIntervalId = setInterval(() => {
+      if (this.#windGust.isGustActive()) return;
       if (Math.random() < this.#warpProbability) this.triggerGust();
     }, 3 * 1000);
   }
 
-  // Starts a gust "from the outside" - the random timer above, and audio
-  // reactivity's beat detection (see sketch.ts), share this single entry
-  // point so both get the same "never interrupt one already running"
-  // guard for free.
+  // Starts a gust "from the outside" - shared by the random ambient timer
+  // above and audio reactivity's beat detection (see sketch.ts). Always
+  // restarts from the beginning, even mid-gust: a beat is a discrete event
+  // that should produce its own visible pulse, and the default Gust
+  // Duration (3000ms) comfortably outlasts the ~150-500ms cooldown between
+  // beats at any plausible tempo - silently dropping every beat that
+  // arrives before the previous gust finishes made gusts collapse into one
+  // long pulse per few seconds instead of tracking the music.
   triggerGust(): void {
-    if (!this.#windGust.isGustActive()) this.#windGust.triggerGust();
+    this.#windGust.triggerGust();
   }
 
   // Lets audio reactivity take over gust triggering (via beat detection)
