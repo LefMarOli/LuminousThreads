@@ -122,6 +122,64 @@ export function setDisplacementColorRange(value: number): void {
   displacementColorRange = value;
 }
 
+// How much #highlightFactor brightens a vertex as it nears its strand's
+// rest position - exposed live (Near-Center Highlight Strength slider)
+// rather than the fixed 0.2 introduced during the WebGL port to tame the
+// singularity at full per-vertex resolution, which incidentally damped the
+// highlight down to a ~0.93x-1.2x swing, imperceptible in practice.
+let highlightDamping = 0.2;
+
+export function setHighlightDamping(value: number): void {
+  highlightDamping = value;
+}
+
+// Far-Center Boost: the opposite of #highlightFactor - brightens a vertex
+// the *further* it has swayed from its strand's rest position, saturating
+// linearly instead of diverging (no singularity guard needed). Scaled by
+// beatEnvelope (see setBeatEnvelope below), so with no trigger source
+// enabled this contributes nothing regardless of Strength/Range.
+let farBoostStrength = 1;
+let farBoostRange = 40;
+
+export function setFarBoostStrength(value: number): void {
+  farBoostStrength = value;
+}
+
+export function setFarBoostRange(value: number): void {
+  farBoostRange = value;
+}
+
+// How far Far-Center Boost's pulse also desaturates a point toward white
+// (0 = hue unaffected, 1 = fully white at peak boost) - rides the exact same
+// distance-ratio/beatEnvelope drive as farExcess above, so a point only
+// shifts toward white exactly when and as much as it's already brightening.
+// Defaults to 0 (off) - ships conservative like every other new knob here.
+let farWhiteShiftStrength = 0;
+
+export function setFarWhiteShiftStrength(value: number): void {
+  farWhiteShiftStrength = value;
+}
+
+// Pushed once per frame from sketch.ts (after strandGrid.move(), so it
+// reflects the current frame's envelope with no lag) - the combined
+// (via max()) 0-1 value of whichever of Far-Center Boost's "React to Gust"/
+// "React to Beat" sources are enabled.
+let beatEnvelope = 0;
+
+export function setBeatEnvelope(value: number): void {
+  beatEnvelope = value;
+}
+
+// Flat multiplier applied before the final 100-brightness clamp - pulling
+// this down creates headroom so Far-Center Boost's beat-triggered pulse
+// reads as a visible brightening instead of instantly clipping at the
+// existing ceiling.
+let masterBrightness = 1;
+
+export function setMasterBrightness(value: number): void {
+  masterBrightness = value;
+}
+
 export class Strand {
   pointsArray: Point[];
   initArray: Point[];
@@ -206,18 +264,33 @@ export class Strand {
     const heightPerc = index / lastIndex;
     const vertex = this.#bezierCurve.vertices[index];
     const [hue, alpha] = this.#segmentHueAlpha(heightPerc, vertex.x);
-    // #highlightFactor's own clamp keeps this bounded rather than
-    // unbounded, but its max (~2x) still overshoots HSB brightness's
-    // defined 0-100 domain - clamped here too so a value outside that
-    // domain never reaches hsbToRgb, regardless of exactly how large the
-    // highlight multiplier gets.
+
+    // Near-Center Highlight and Far-Center Boost are combined additively as
+    // "excess over 1" rather than multiplied together - multiplying two
+    // independently-tunable boosts risks compounding into a flat, clipped
+    // look when both are pushed high at once; additive combination is
+    // inherently bounded by each term's own bound. #highlightFactor's own
+    // distance clamp keeps its excess finite rather than diverging at the
+    // singularity; the 100-brightness clamp below still catches the
+    // combined result regardless of exactly how large either term gets.
+    const distance = Math.abs(this.initX - vertex.x);
+    const nearExcess = this.#highlightFactor(distance) - 1;
+    // Shared by Far-Center Boost's brightness excess and its optional white
+    // shift below - both should only appear exactly when and as much as a
+    // point is currently boosted, not on independent timing.
+    const farDrive = Math.min(distance / farBoostRange, 1) * beatEnvelope;
+    const farExcess = farBoostStrength * farDrive;
+    const whiteShiftAmount = Math.min(farWhiteShiftStrength * farDrive, 1);
+    const saturation = 100 * (1 - whiteShiftAmount);
+
     const brightness = Math.min(
       100 *
-        this.#highlightFactor(vertex, vertex) *
+        masterBrightness *
+        (1 + nearExcess + farExcess) *
         this.#segmentBrightness(index),
       100,
     );
-    const [r, g, b] = hsbToRgb(hue, 100, brightness);
+    const [r, g, b] = hsbToRgb(hue, saturation, brightness);
     return [r, g, b, alpha];
   }
 
@@ -280,30 +353,24 @@ export class Strand {
     }
   }
 
-  // Diverges to Infinity as middleX approaches initX - a strand's own
-  // wavy motion regularly carries a vertex back arbitrarily close to its
-  // neutral rest position, hitting this singularity for real (not just a
-  // theoretical edge case). The distance clamp below bounds that spike to
-  // a finite (~2x) peak instead of unbounded.
+  // Diverges to Infinity as distance approaches 0 - a strand's own wavy
+  // motion regularly carries a vertex back arbitrarily close to its neutral
+  // rest position, hitting this singularity for real (not just a
+  // theoretical edge case). The distance clamp below bounds that spike to a
+  // finite (~2x) raw peak instead of unbounded; highlightDamping (a live
+  // slider - see setHighlightDamping above) then scales that raw swing down
+  // to whatever's visually appropriate.
   //
-  // That bounded peak is still visible as a distinct flash once captured
-  // by the trail buffer, though: stiffnessEffect (stiffness.ts) is a
-  // spring-like restoring force pulling each point back toward initX, so
-  // - exactly like any spring-restored oscillator - a strand's crossing
-  // speed through its own rest position is naturally *highest* right where
-  // this highlight also peaks. A fast crossing still spends a couple of
-  // frames very near that column, and the trail persists whatever
-  // brightness was there - a ~3x swing between the near-center peak and
-  // the away-from-center baseline (~0.6x-2x, verified directly) reads as a
-  // clear blip against the surrounding steadier trail. Damping the swing
-  // toward a neutral 1x keeps the "brighter near center" character (an
-  // intentional highlight, not being removed) while shrinking it to a
-  // subtle variation that doesn't stand out once captured in the trail.
-  #highlightFactor(p1: Point, p2: Point): number {
-    const middleX = (p1.x + p2.x) / 2.0;
-    const distance = Math.max(Math.abs(this.initX - middleX), 0.002);
-    const rawFactor = 1.0 / Math.pow(distance, 1 / 9);
-    const highlightDamping = 0.2;
+  // That peak is still visible as a distinct flash once captured by the
+  // trail buffer: stiffnessEffect (stiffness.ts) is a spring-like restoring
+  // force pulling each point back toward initX, so - exactly like any
+  // spring-restored oscillator - a strand's crossing speed through its own
+  // rest position is naturally *highest* right where this highlight also
+  // peaks. A fast crossing still spends a couple of frames very near that
+  // column, and the trail persists whatever brightness was there.
+  #highlightFactor(distance: number): number {
+    const clampedDistance = Math.max(distance, 0.002);
+    const rawFactor = 1.0 / Math.pow(clampedDistance, 1 / 9);
     return 1 + (rawFactor - 1) * highlightDamping;
   }
 

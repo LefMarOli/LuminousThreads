@@ -2,6 +2,7 @@ import { Point } from "./point";
 import { Strand } from "./strand";
 import { NoiseLayer } from "./effects/noise";
 import { WindGust } from "./effects/windGust";
+import { AttackDecayEnvelope } from "./effects/attackDecayEnvelope";
 import { stiffnessEffect } from "./effects/stiffness";
 import { mapCoefficients } from "./bezier/bezierCurve";
 import { hexToHue } from "./color/hexToHue";
@@ -33,6 +34,14 @@ export class StrandGrid {
   #noiseLayers: NoiseLayerEntry[] = [];
   #nextLayerId = 0;
   #windGust = new WindGust();
+  // Independent of #windGust's own trigger/timing - "React to Beat" (see
+  // strand.ts/sketch.ts) needs a beat to pulse Far-Center Boost even when
+  // "Trigger Gust on Beat" is off, so this can't just read #windGust's
+  // envelope. "Sync to Gust" (below) optionally mirrors #windGust's shape
+  // config into this one every frame instead of using its own.
+  #beatColorEnvelope = new AttackDecayEnvelope();
+  #beatEnvelopeSyncToGust = false;
+  #lastBeatEnvelopeValue = 0;
   #loopDuration: number;
   // Only set once the corresponding slider is touched - until then, newly
   // added layers just use the constructor's own loopTime-derived radius.
@@ -208,6 +217,50 @@ export class StrandGrid {
     this.#windGust.setGustDecaySharpness(value);
   }
 
+  // Starts the beat-triggered color envelope "from the outside" - called
+  // directly on every detected beat (see sketch.ts), independent of whether
+  // that beat also triggers a wind gust (see "Trigger Gust on Beat") or
+  // whether Far-Center Boost's "React to Beat" option is even enabled -
+  // this always advances; strand.ts's own getVertexColor decides whether to
+  // read the result (see getBeatEnvelope()). Always restarts mid-envelope,
+  // same reasoning as triggerGust() above.
+  triggerBeatColorEnvelope(): void {
+    this.#beatColorEnvelope.trigger();
+  }
+
+  // Locks the beat-color envelope's shape to the Gust tab's own live values
+  // instead of its own independent sliders - same "disable + drive" idea as
+  // Color Speed's "Sync to Noise" toggle.
+  setBeatEnvelopeSyncToGust(enabled: boolean): void {
+    this.#beatEnvelopeSyncToGust = enabled;
+  }
+
+  setBeatEnvelopeDuration(value: number): void {
+    this.#beatColorEnvelope.setDuration(value);
+  }
+
+  setBeatEnvelopeAttackFraction(value: number): void {
+    this.#beatColorEnvelope.setAttackFraction(value);
+  }
+
+  setBeatEnvelopeAttackSharpness(value: number): void {
+    this.#beatColorEnvelope.setAttackSharpness(value);
+  }
+
+  setBeatEnvelopeDecaySharpness(value: number): void {
+    this.#beatColorEnvelope.setDecaySharpness(value);
+  }
+
+  // This gust's own current 0->1->0 ramp shape - see WindGust.getEnvelopeValue().
+  getGustEnvelope(): number {
+    return this.#windGust.getEnvelopeValue();
+  }
+
+  // The beat-triggered color envelope's current 0->1->0 ramp shape.
+  getBeatEnvelope(): number {
+    return this.#lastBeatEnvelopeValue;
+  }
+
   // Broadcasts to every layer's own noise-space walk radius/period, rather
   // than tuning a single instance - these stay global controls (unlike
   // Amplitude/Frequency/Speed) since they weren't part of the per-layer
@@ -241,6 +294,20 @@ export class StrandGrid {
       layer.noiseStep(deltaTime);
       layer.setWarpFactor(warp);
     });
+
+    if (this.#beatEnvelopeSyncToGust) {
+      this.#beatColorEnvelope.setDuration(this.#windGust.getGustDuration());
+      this.#beatColorEnvelope.setAttackFraction(
+        this.#windGust.getGustAttackFraction(),
+      );
+      this.#beatColorEnvelope.setAttackSharpness(
+        this.#windGust.getGustAttackSharpness(),
+      );
+      this.#beatColorEnvelope.setDecaySharpness(
+        this.#windGust.getGustDecaySharpness(),
+      );
+    }
+    this.#lastBeatEnvelopeValue = this.#beatColorEnvelope.step(deltaTime);
 
     const effects = [
       ...this.#noiseLayers.map(({ layer }) => layer.noiseEffect),

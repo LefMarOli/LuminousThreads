@@ -31,6 +31,12 @@ import {
   setExitingDirectionBias,
   setColorMode,
   setDisplacementColorRange,
+  setHighlightDamping,
+  setFarBoostStrength,
+  setFarBoostRange,
+  setFarWhiteShiftStrength,
+  setMasterBrightness,
+  setBeatEnvelope,
 } from "./strand";
 
 // Sound-reactive visuals aren't actually wired into any rendering yet -
@@ -84,6 +90,14 @@ new p5((p: p5) => {
   let controlsPanel: ControlsPanel;
   let colorSpeedSlider: SliderHandle;
   let syncColorSpeedToNoise = false;
+
+  // Far-Center Boost's shape sliders - assigned once in setup(), mirrored
+  // every frame from p.draw() while beatEnvelopeSyncToGust is on (same
+  // "sync + mirror" idea as colorSpeedSlider above).
+  let beatEnvelopeAttackFractionSlider: SliderHandle;
+  let beatEnvelopeAttackSharpnessSlider: SliderHandle;
+  let beatEnvelopeDecaySharpnessSlider: SliderHandle;
+  let beatEnvelopeDurationSlider: SliderHandle;
 
   // Audio reactivity's target - the Rendering tab's Strand Width slider
   // (treble). Assigned once in setup(), then driven every frame from
@@ -156,6 +170,29 @@ new p5((p: p5) => {
   let noiseLoopDuration = 50;
   let noisePathRadius = 2;
 
+  // Whether a detected beat also starts a wind gust - previously
+  // unconditional; now opt-out so gust-triggering and Far-Center Boost's own
+  // "React to Beat" can be tuned independently of each other.
+  let triggerGustOnBeat = true;
+
+  // Far-Center Boost's two independent, opt-in trigger sources (combined via
+  // max() in p.draw - see strand.ts's beatEnvelope) plus its own strength/
+  // shape knobs. The shape knobs (Attack/Attack Sharpness/Decay Sharpness/
+  // Duration) live on strandGrid's #beatColorEnvelope, so - like the Gust
+  // values above - they need reapplying after every rebuildStrandGrid().
+  let reactToGust = false;
+  let reactToBeat = false;
+  let beatEnvelopeSyncToGust = false;
+  let beatEnvelopeAttackFraction = 0.15;
+  let beatEnvelopeAttackSharpness = 4;
+  let beatEnvelopeDecaySharpness = 4;
+  let beatEnvelopeDuration = 3000;
+
+  // Whether audio capture drives Strand Width from treble - the effect
+  // isn't working well yet, so this defaults off, handing manual control
+  // back even while audio capture is active (see setAudioReactive below).
+  let reactToTreble = false;
+
   function rebuildStrandGrid(): void {
     strandGrid.destroy();
     strandGrid = new StrandGrid(
@@ -184,6 +221,14 @@ new p5((p: p5) => {
     strandGrid.setNoiseLoopDuration(noiseLoopDuration);
     strandGrid.setNoisePathRadius(noisePathRadius);
 
+    // Same reasoning as the Gust values above - a fresh StrandGrid's
+    // #beatColorEnvelope starts at its own hardcoded defaults.
+    strandGrid.setBeatEnvelopeSyncToGust(beatEnvelopeSyncToGust);
+    strandGrid.setBeatEnvelopeAttackFraction(beatEnvelopeAttackFraction);
+    strandGrid.setBeatEnvelopeAttackSharpness(beatEnvelopeAttackSharpness);
+    strandGrid.setBeatEnvelopeDecaySharpness(beatEnvelopeDecaySharpness);
+    strandGrid.setBeatEnvelopeDuration(beatEnvelopeDuration);
+
     // Every fresh StrandGrid also starts with its random gust timer
     // running, regardless of whether audio reactivity had turned it off on
     // the instance just destroyed above - reapply the current mode so
@@ -197,14 +242,15 @@ new p5((p: p5) => {
     reconcileNoiseLayers();
   }
 
-  // Hands gust triggering and Strand Width over to audio analysis (beat ->
-  // gust, treble -> Strand Width) while capture is active - disables the
-  // random gust timer so beats are the only thing triggering gusts, and
-  // disables+syncs Strand Width the same way "Sync to Noise" already does
-  // for Color Speed, so it's clear it's driven, not stale.
+  // Hands gust triggering over to audio analysis (beat -> gust) while
+  // capture is active - disables the random gust timer so beats are the
+  // only thing triggering gusts. Strand Width is only handed over on top of
+  // that when React to Treble is also on (see its own toggle below) -
+  // disabled+synced the same way "Sync to Noise" already does for Color
+  // Speed, so it's clear it's driven, not stale.
   function setAudioReactive(active: boolean): void {
     strandGrid.setRandomGustEnabled(!active);
-    strandWidthSlider.setEnabled(!active);
+    strandWidthSlider.setEnabled(!(active && reactToTreble));
     gustFrequencySlider.setEnabled(!active);
   }
 
@@ -459,6 +505,15 @@ new p5((p: p5) => {
         strandGrid.setGustDecaySharpness(value);
       },
     });
+    Gust.addToggle({
+      label: "Trigger Gust on Beat",
+      initialValue: triggerGustOnBeat,
+      description:
+        "Whether a detected beat also starts a wind gust, independent of whether Far-Center Boost's own Color tab controls react to beats.",
+      onChange: (value) => {
+        triggerGustOnBeat = value;
+      },
+    });
 
     controlsPanel.addGroup("Presence");
     controlsPanel.addSlider({
@@ -525,8 +580,14 @@ new p5((p: p5) => {
       onChange: (value) => setExitingDirectionBias(value),
     });
 
-    controlsPanel.addGroup("Color");
-    colorSpeedSlider = controlsPanel.addSlider({
+    const color = controlsPanel.addGroup("Color");
+    const {
+      General: ColorGeneral,
+      Highlights,
+      "Far-Center Boost": FarCenterBoost,
+    } = color.addSubTabs(["General", "Highlights", "Far-Center Boost"]);
+
+    colorSpeedSlider = ColorGeneral.addSlider({
       label: "Color Speed",
       min: 0,
       max: 3,
@@ -535,7 +596,7 @@ new p5((p: p5) => {
       description: "How fast each strand's hue drifts and cycles over time.",
       onChange: (value) => setColorSpeedMultiplier(value),
     });
-    controlsPanel.addToggle({
+    ColorGeneral.addToggle({
       label: "Sync to Noise",
       initialValue: false,
       description:
@@ -545,7 +606,7 @@ new p5((p: p5) => {
         colorSpeedSlider.setEnabled(!value);
       },
     });
-    controlsPanel.addSlider({
+    ColorGeneral.addSlider({
       label: "Fade Length",
       min: 0.1,
       max: 1,
@@ -555,7 +616,7 @@ new p5((p: p5) => {
         "How much of a strand's length fades in and out at its top and bottom ends.",
       onChange: (value) => setFadePercentage(value),
     });
-    controlsPanel.addSlider({
+    ColorGeneral.addSlider({
       label: "Start Hue",
       min: 0,
       max: 360,
@@ -569,7 +630,7 @@ new p5((p: p5) => {
         rebuildStrandGrid();
       },
     });
-    controlsPanel.addSlider({
+    ColorGeneral.addSlider({
       label: "End Hue",
       min: 0,
       max: 360,
@@ -583,14 +644,14 @@ new p5((p: p5) => {
         rebuildStrandGrid();
       },
     });
-    controlsPanel.addToggle({
+    ColorGeneral.addToggle({
       label: "Proportional Color Mode",
       initialValue: false,
       description:
         "Colors each point by how far it has swayed sideways from its rest position (Start Hue on the left, End Hue on the right), instead of by its position along the strand's length.",
       onChange: (value) => setColorMode(value ? "Proportional" : "Gradient"),
     });
-    controlsPanel.addSlider({
+    ColorGeneral.addSlider({
       label: "Displacement Range",
       min: 5,
       max: 100,
@@ -599,6 +660,145 @@ new p5((p: p5) => {
       description:
         "In Proportional color mode, how far a point needs to sway sideways from rest to reach the full Start Hue/End Hue range.",
       onChange: (value) => setDisplacementColorRange(value),
+    });
+
+    Highlights.addSlider({
+      label: "Near-Center Highlight Strength",
+      min: 0,
+      max: 1,
+      step: 0.05,
+      initialValue: 0.2,
+      description:
+        "How much a point brightens as it sways back near its strand's rest position - 0 disables the highlight entirely.",
+      onChange: (value) => setHighlightDamping(value),
+    });
+    Highlights.addSlider({
+      label: "Master Brightness",
+      min: 0,
+      max: 1,
+      step: 0.05,
+      initialValue: 1,
+      description:
+        "Global brightness multiplier, applied before every other color effect - lower this to leave headroom for Far-Center Boost's beat-triggered pulse to read clearly instead of clipping.",
+      onChange: (value) => setMasterBrightness(value),
+    });
+
+    FarCenterBoost.addToggle({
+      label: "React to Gust",
+      initialValue: reactToGust,
+      description:
+        "Brightens far-swayed points along the same attack/decay pulse as whichever wind gust is currently active (ambient or beat-triggered) - previewable without audio, since ambient gusts still fire on their own timer.",
+      onChange: (value) => {
+        reactToGust = value;
+      },
+    });
+    FarCenterBoost.addToggle({
+      label: "React to Beat",
+      initialValue: reactToBeat,
+      description:
+        "Brightens far-swayed points on a pulse triggered directly by detected beats, independent of gust state - fires even if Trigger Gust on Beat is off.",
+      onChange: (value) => {
+        reactToBeat = value;
+      },
+    });
+    FarCenterBoost.addSlider({
+      label: "Strength",
+      min: 0,
+      max: 3,
+      step: 0.1,
+      initialValue: 1,
+      decimals: 1,
+      description:
+        "How strong the far-from-center brightening gets at its peak.",
+      onChange: (value) => setFarBoostStrength(value),
+    });
+    FarCenterBoost.addSlider({
+      label: "Range",
+      min: 5,
+      max: 100,
+      step: 5,
+      initialValue: 40,
+      description:
+        "How far a point needs to sway sideways from rest to reach the full boost strength.",
+      onChange: (value) => setFarBoostRange(value),
+    });
+    FarCenterBoost.addSlider({
+      label: "White Shift Amount",
+      min: 0,
+      max: 1,
+      step: 0.05,
+      initialValue: 0,
+      description:
+        "How far a fully-boosted point desaturates toward white, on top of brightening - 0 leaves hue untouched. Rides the exact same pulse as the brightness boost above.",
+      onChange: (value) => setFarWhiteShiftStrength(value),
+    });
+    beatEnvelopeAttackFractionSlider = FarCenterBoost.addSlider({
+      label: "Attack",
+      min: 0.05,
+      max: 0.9,
+      step: 0.05,
+      initialValue: beatEnvelopeAttackFraction,
+      description:
+        "How much of the pulse's duration is spent rising to peak brightness - the rest is spent decaying back down.",
+      onChange: (value) => {
+        beatEnvelopeAttackFraction = value;
+        strandGrid.setBeatEnvelopeAttackFraction(value);
+      },
+    });
+    beatEnvelopeAttackSharpnessSlider = FarCenterBoost.addSlider({
+      label: "Attack Sharpness",
+      min: 0.5,
+      max: 10,
+      step: 0.5,
+      initialValue: beatEnvelopeAttackSharpness,
+      decimals: 1,
+      description:
+        "How much the pulse's rise accelerates into its peak - low values ramp up almost steadily, high values rush the last stretch.",
+      onChange: (value) => {
+        beatEnvelopeAttackSharpness = value;
+        strandGrid.setBeatEnvelopeAttackSharpness(value);
+      },
+    });
+    beatEnvelopeDecaySharpnessSlider = FarCenterBoost.addSlider({
+      label: "Decay Sharpness",
+      min: 0.5,
+      max: 10,
+      step: 0.5,
+      initialValue: beatEnvelopeDecaySharpness,
+      decimals: 1,
+      description:
+        "How sharply the pulse drops right after its peak before trailing off - higher values feel snappier.",
+      onChange: (value) => {
+        beatEnvelopeDecaySharpness = value;
+        strandGrid.setBeatEnvelopeDecaySharpness(value);
+      },
+    });
+    beatEnvelopeDurationSlider = FarCenterBoost.addSlider({
+      label: "Duration",
+      min: 50,
+      max: 8000,
+      step: 50,
+      initialValue: beatEnvelopeDuration,
+      decimals: 0,
+      description: "How long the pulse takes overall, in milliseconds.",
+      onChange: (value) => {
+        beatEnvelopeDuration = value;
+        strandGrid.setBeatEnvelopeDuration(value);
+      },
+    });
+    FarCenterBoost.addToggle({
+      label: "Sync to Gust",
+      initialValue: beatEnvelopeSyncToGust,
+      description:
+        "Locks the four shape controls above to the Gust tab's own live values instead of tuning them separately.",
+      onChange: (value) => {
+        beatEnvelopeSyncToGust = value;
+        strandGrid.setBeatEnvelopeSyncToGust(value);
+        beatEnvelopeAttackFractionSlider.setEnabled(!value);
+        beatEnvelopeAttackSharpnessSlider.setEnabled(!value);
+        beatEnvelopeDecaySharpnessSlider.setEnabled(!value);
+        beatEnvelopeDurationSlider.setEnabled(!value);
+      },
     });
 
     controlsPanel.addGroup("Rendering");
@@ -610,6 +810,16 @@ new p5((p: p5) => {
       initialValue: 3,
       description: "How thick the glowing strands render.",
       onChange: (value) => renderer.setStrandWidth(value),
+    });
+    controlsPanel.addToggle({
+      label: "React to Treble",
+      initialValue: reactToTreble,
+      description:
+        "Drives Strand Width from audio treble while capture is active, disabling manual control of this slider. Off by default - the effect isn't producing a good result yet.",
+      onChange: (value) => {
+        reactToTreble = value;
+        strandWidthSlider.setEnabled(!(audioAnalyzer !== undefined && value));
+      },
     });
     const defaultTrailLengthFraction =
       (MAX_TRAIL_DECAY - DEFAULT_TRAIL_DECAY_AMOUNT) /
@@ -720,19 +930,22 @@ new p5((p: p5) => {
 
       if (audioAnalyzer.beat) {
         console.log("beat");
-        strandGrid.triggerGust();
+        if (triggerGustOnBeat) strandGrid.triggerGust();
+        if (reactToBeat) strandGrid.triggerBeatColorEnvelope();
       }
 
       // Treble -> Strand Width - already 0-1 normalized (see AudioAnalysis),
       // remapped onto the slider's own range so audio-driven values read
       // the same as manual ones. The slider is disabled while this runs
-      // (setAudioReactive) but still updated so it visibly tracks what's
-      // actually happening.
-      const trebleWidth =
-        MIN_STRAND_WIDTH +
-        audioAnalyzer.treble * (MAX_STRAND_WIDTH - MIN_STRAND_WIDTH);
-      renderer.setStrandWidth(trebleWidth);
-      strandWidthSlider.setValue(trebleWidth);
+      // (setAudioReactive/React to Treble) but still updated so it visibly
+      // tracks what's actually happening. Off by default - see reactToTreble.
+      if (reactToTreble) {
+        const trebleWidth =
+          MIN_STRAND_WIDTH +
+          audioAnalyzer.treble * (MAX_STRAND_WIDTH - MIN_STRAND_WIDTH);
+        renderer.setStrandWidth(trebleWidth);
+        strandWidthSlider.setValue(trebleWidth);
+      }
 
       fftOverlay?.draw(audioAnalyzer.spectrum, audioAnalyzer.beat);
     }
@@ -745,6 +958,15 @@ new p5((p: p5) => {
     strandGrid.move(p.deltaTime);
     strandGrid.update(p.deltaTime);
 
+    // Combined (via max(), not summed) so a beat that also triggers a gust
+    // doesn't double-count if both React to Gust and React to Beat are on.
+    setBeatEnvelope(
+      Math.max(
+        reactToGust ? strandGrid.getGustEnvelope() : 0,
+        reactToBeat ? strandGrid.getBeatEnvelope() : 0,
+      ),
+    );
+
     // Polled every frame (rather than only when the Noise Speed slider
     // moves) so Color Speed keeps tracking the noise's actual current rate
     // through a gust's ramp up/down too, not just its resting value.
@@ -752,6 +974,14 @@ new p5((p: p5) => {
       const noiseSpeed = strandGrid.getNoiseCurrentSpeed();
       setColorSpeedMultiplier(noiseSpeed);
       colorSpeedSlider.setValue(noiseSpeed);
+    }
+    // Same "sync + mirror while disabled" idea as Color Speed above - keeps
+    // the four shape sliders visibly tracking the Gust tab's live values.
+    if (beatEnvelopeSyncToGust) {
+      beatEnvelopeAttackFractionSlider.setValue(gustAttackFraction);
+      beatEnvelopeAttackSharpnessSlider.setValue(gustAttackSharpness);
+      beatEnvelopeDecaySharpnessSlider.setValue(gustDecaySharpness);
+      beatEnvelopeDurationSlider.setValue(gustDuration);
     }
     renderer.render(strandGrid);
   };

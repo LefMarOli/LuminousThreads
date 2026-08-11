@@ -12,7 +12,7 @@ Two independent but related asks:
    far it has swayed from its strand's own rest position (`initX`), with
    the option to have that boost pulse on the beat rather than sit static.
 2. Along the way, a real regression was found: `Strand#highlightFactor`
-   (the *existing* "brighter near center" highlight) was effectively
+   (the _existing_ "brighter near center" highlight) was effectively
    silenced by damping added during the WebGL port (see `#highlightFactor`
    in `src/strand.ts`) to tame a singularity at full per-vertex resolution.
    The damping (`0.2`) squashed the effect to a ~0.93x-1.2x swing -
@@ -163,7 +163,7 @@ manual control now; flipping it on later revisits the effect.
 - `src/sketch.ts` - gate beat -> gust and treble -> width behind their new
   toggles; wire all new sliders/toggles into the Color and Rendering tabs
   and the new Far-Center Boost sub-tab; feed `max(gustEnvelope,
-  beatEnvelope)` into `strand.ts`'s `setBeatEnvelope` each frame, ordered
+beatEnvelope)` into `strand.ts`'s `setBeatEnvelope` each frame, ordered
   after `strandGrid.move()` so it reflects the current frame's value with
   no lag.
 

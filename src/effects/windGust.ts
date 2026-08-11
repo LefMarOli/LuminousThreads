@@ -1,3 +1,5 @@
+import { AttackDecayEnvelope } from "./attackDecayEnvelope";
+
 const minWarpFactor = 1.0;
 
 // A single shared gust controller, driving one warpFactor value per frame
@@ -6,55 +8,69 @@ const minWarpFactor = 1.0;
 // noise field at once, rather than being a property of any one layer.
 export class WindGust {
   #maxWarpFactor = 1.5;
-  #gustDuration = 3000;
-  // How far (in ms) into the current gust step has advanced - only
-  // meaningful while #gustActive; reset whenever a gust starts or finishes.
-  #gustElapsed = 0;
-  #gustActive = false;
-  // Fraction of #gustDuration spent on the attack (ramping up) - the rest is
-  // the decay. Kept off 0/1 by the controls panel's slider bounds so the
-  // divisions in step() below never see a zero-width phase.
-  #gustAttackFraction = 0.15;
-  // How sharply the attack accelerates into its peak - a traditional
-  // exponential growth curve, slow at first then ramping up, mirroring the
-  // decay's shape (exponential, rescaled to hit its endpoint exactly) but
-  // rising instead of falling. Must stay > 0 (see step() below).
-  #gustAttackSharpness = 4;
-  // How sharply the decay phase initially drops before its long tail -
-  // higher values feel snappier, lower values feel more gradual. Must stay
-  // > 0 (see step() below).
-  #gustDecaySharpness = 4;
+  #envelope = new AttackDecayEnvelope();
+  // Cached from the last step() call so getEnvelopeValue() can be read by
+  // other callers (e.g. the beat-triggered color effect's "React to Gust"
+  // option, see strandGrid.ts) without advancing the clock a second time.
+  #lastEnvelopeValue = 0;
 
   setMaxWarpFactor(value: number): void {
     this.#maxWarpFactor = value;
   }
 
   setGustDuration(value: number): void {
-    this.#gustDuration = value;
+    this.#envelope.setDuration(value);
   }
 
   setGustAttackFraction(value: number): void {
-    this.#gustAttackFraction = value;
+    this.#envelope.setAttackFraction(value);
   }
 
   setGustAttackSharpness(value: number): void {
-    this.#gustAttackSharpness = value;
+    this.#envelope.setAttackSharpness(value);
   }
 
   setGustDecaySharpness(value: number): void {
-    this.#gustDecaySharpness = value;
+    this.#envelope.setDecaySharpness(value);
+  }
+
+  // Live shape config, read by the beat-triggered color envelope's own
+  // "Sync to Gust" option (see strandGrid.ts) to mirror+drive its four
+  // shape sliders from whatever this gust is actually configured with.
+  getGustDuration(): number {
+    return this.#envelope.getDuration();
+  }
+
+  getGustAttackFraction(): number {
+    return this.#envelope.getAttackFraction();
+  }
+
+  getGustAttackSharpness(): number {
+    return this.#envelope.getAttackSharpness();
+  }
+
+  getGustDecaySharpness(): number {
+    return this.#envelope.getDecaySharpness();
   }
 
   isGustActive(): boolean {
-    return this.#gustActive;
+    return this.#envelope.isActive();
   }
 
   // Starts a gust from its beginning - StrandGrid's roll check only calls
   // this while !isGustActive(), so it never interrupts/restarts one already
-  // in progress.
+  // in progress via the ambient timer; a beat always restarts regardless
+  // (see StrandGrid.triggerGust()).
   triggerGust(): void {
-    this.#gustActive = true;
-    this.#gustElapsed = 0;
+    this.#envelope.trigger();
+  }
+
+  // This gust's own raw 0->1->0 ramp shape, independent of #maxWarpFactor's
+  // scaling - read by the beat-triggered color effect's "React to Gust"
+  // option so it can pulse in lockstep with the wind warp without needing
+  // its own separate trigger/timing.
+  getEnvelopeValue(): number {
+    return this.#lastEnvelopeValue;
   }
 
   // Advances the gust clock and returns the current warpFactor for this
@@ -63,38 +79,10 @@ export class WindGust {
   // left to gate this clock on (previously, freezing Noise Speed also froze
   // the gust; that coupling is gone).
   step(deltaTime: number): number {
-    if (this.#gustActive) {
-      this.#gustElapsed += deltaTime;
-      if (this.#gustElapsed >= this.#gustDuration) {
-        this.#gustActive = false;
-        this.#gustElapsed = 0;
-      }
-    }
-
-    // Attack/decay splice: an exponential *growth* rise over the first
-    // #gustAttackFraction of the gust (slow at first, ramping up into the
-    // peak), then an exponential *decay* over the rest (fast initial drop,
-    // long trailing tail) - both rescaled (dividing out their own value at
-    // the far end and renormalizing) so they land exactly on 0/1 at their
-    // boundaries instead of only approaching them asymptotically.
-    const gustProgress = this.#gustActive
-      ? this.#gustElapsed / this.#gustDuration
-      : 0;
-    let rampShape: number;
-    if (gustProgress <= this.#gustAttackFraction) {
-      const attackProgress = gustProgress / this.#gustAttackFraction;
-      const raw = Math.exp(this.#gustAttackSharpness * attackProgress) - 1;
-      const peak = Math.exp(this.#gustAttackSharpness) - 1;
-      rampShape = raw / peak;
-    } else {
-      const decayProgress =
-        (gustProgress - this.#gustAttackFraction) /
-        (1 - this.#gustAttackFraction);
-      const raw = Math.exp(-this.#gustDecaySharpness * decayProgress);
-      const tail = Math.exp(-this.#gustDecaySharpness);
-      rampShape = (raw - tail) / (1 - tail);
-    }
-
-    return minWarpFactor + (this.#maxWarpFactor - minWarpFactor) * rampShape;
+    this.#lastEnvelopeValue = this.#envelope.step(deltaTime);
+    return (
+      minWarpFactor +
+      (this.#maxWarpFactor - minWarpFactor) * this.#lastEnvelopeValue
+    );
   }
 }
