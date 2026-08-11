@@ -14,6 +14,7 @@ import {
   ControlsPanel,
   type SliderHandle,
   type ButtonHandle,
+  type ReadoutHandle,
   type RemovableGroupHandle,
 } from "./ui/controlsPanel";
 import { FftOverlay } from "./ui/fftOverlay";
@@ -105,12 +106,18 @@ new p5((p: p5) => {
 
   // BeatDetector lives inside whatever AudioAnalysis the "a" key last
   // constructed (see p.keyPressed) - a fresh one every capture session, with
-  // its own defaults. These persist the controls panel's chosen values
+  // its own defaults. This persists the controls panel's chosen sensitivity
   // across that churn, reapplied to each new AudioAnalysis right after it's
-  // constructed, so adjusting Beat Sensitivity/Cooldown before ever pressing
-  // "a" still takes effect on the very first capture.
+  // constructed, so adjusting Beat Sensitivity before ever pressing "a"
+  // still takes effect on the very first capture. Cooldown is no longer a
+  // manual value - AudioAnalysis derives it every frame from its own
+  // TempoEstimator, falling back to a fixed internal constant while
+  // unconfident (see tempoEstimator.ts).
   let beatSensitivity = 1.3;
-  let beatCooldown = 200;
+  // Read-only BPM/confidence display, driven from p.draw() below - not a
+  // parameter the user sets, so it doesn't get the beatSensitivity/
+  // beatCooldown treatment above.
+  let bpmReadout: ReadoutHandle;
 
   // Constructor args the controls panel can change (Strand Spacing/Start
   // Hue/End Hue/Control Points/Interpolation Points) - unlike most sliders
@@ -685,19 +692,11 @@ new p5((p: p5) => {
           audioAnalyzer?.setBeatSensitivity(value);
         },
       });
-      Audio.addSlider({
-        label: "Beat Cooldown",
-        min: 0,
-        max: 1000,
-        step: 25,
-        initialValue: beatCooldown,
-        decimals: 0,
+      bpmReadout = Audio.addReadout({
+        label: "Tempo",
+        initialValue: "—",
         description:
-          "Minimum time (ms) between two detected beats - prevents one loud moment from registering as several beats in a row.",
-        onChange: (value) => {
-          beatCooldown = value;
-          audioAnalyzer?.setBeatCooldown(value);
-        },
+          "Estimated BPM and lock confidence, from onset autocorrelation - drives the beat detector's cooldown automatically instead of a fixed value. Takes a few seconds of confident signal to lock onto a tempo.",
       });
     }
   };
@@ -705,6 +704,14 @@ new p5((p: p5) => {
   p.draw = () => {
     if (audioAnalyzer) {
       audioAnalyzer.update();
+
+      bpmReadout?.setValue(
+        audioAnalyzer.bpm
+          ? `${audioAnalyzer.bpm.toFixed(1)} BPM (${Math.round(
+              Math.min(1, audioAnalyzer.bpmConfidence) * 100,
+            )}%)`
+          : "—",
+      );
 
       if (audioAnalyzer.bass > maxVal) {
         maxVal = audioAnalyzer.bass;
@@ -787,9 +794,9 @@ new p5((p: p5) => {
         audioAnalyzer = new AudioAnalysis(displaySource);
         // A fresh BeatDetector defaults every time - reapply whatever the
         // controls panel had set, even if that happened before this very
-        // first capture.
+        // first capture. Cooldown isn't reapplied here - AudioAnalysis
+        // derives it internally from its own TempoEstimator every frame.
         audioAnalyzer.setBeatSensitivity(beatSensitivity);
-        audioAnalyzer.setBeatCooldown(beatCooldown);
         audioAnalyzer.start();
         setAudioReactive(true);
       }

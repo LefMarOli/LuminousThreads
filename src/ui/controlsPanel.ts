@@ -38,6 +38,20 @@ export interface ButtonConfig {
   onClick: () => void;
 }
 
+export interface ReadoutConfig {
+  label: string;
+  initialValue: string;
+  // Same hoverable info icon as SliderConfig.description.
+  description?: string;
+}
+
+// Returned by addReadout() so a caller can push updated text into a
+// non-interactive display row - e.g. a live BPM/confidence readout the
+// user can't drag, only observe.
+export interface ReadoutHandle {
+  setValue(value: string): void;
+}
+
 // Returned by addSlider() so a caller can drive the slider programmatically -
 // e.g. mirroring one slider's value onto another when a toggle links them
 // (see sketch.ts's "Sync to Noise" toggle), without that caller reaching
@@ -71,6 +85,9 @@ export interface GroupHandle {
   // Builds a titled, removable sub-container inside this group (the "layer
   // card" primitive) - a GroupHandle plus remove().
   addRemovableGroup(title: string): RemovableGroupHandle;
+  // A label + non-interactive value row - for displaying a computed value
+  // (e.g. an estimated BPM) rather than a parameter the user can drag.
+  addReadout(config: ReadoutConfig): ReadoutHandle;
 }
 
 export interface RemovableGroupHandle extends GroupHandle {
@@ -167,6 +184,43 @@ function createSliderRow(
   };
 }
 
+function createReadoutRow(
+  container: HTMLElement,
+  config: ReadoutConfig,
+): ReadoutHandle {
+  const row = document.createElement("div");
+  row.className = "controls-panel__row";
+
+  const labelText = document.createElement("span");
+  labelText.className = "controls-panel__label";
+  labelText.textContent = config.label;
+
+  if (config.description) {
+    const info = document.createElement("span");
+    info.className = "controls-panel__info";
+    info.textContent = "ⓘ";
+    info.title = config.description;
+    labelText.append(" ", info);
+  }
+
+  const valueText = document.createElement("span");
+  valueText.className = "controls-panel__value";
+  valueText.textContent = config.initialValue;
+
+  const labelRow = document.createElement("div");
+  labelRow.className = "controls-panel__label-row";
+  labelRow.append(labelText, valueText);
+
+  row.append(labelRow);
+  container.appendChild(row);
+
+  return {
+    setValue(value) {
+      valueText.textContent = value;
+    },
+  };
+}
+
 function createToggleRow(container: HTMLElement, config: ToggleConfig): void {
   const row = document.createElement("label");
   row.className = "controls-panel__row controls-panel__row--toggle";
@@ -224,6 +278,7 @@ function createGroupHandle(container: HTMLElement): GroupHandle {
     addButton: (config) => createButtonRow(container, config),
     addSubTabs: (titles) => createSubTabs(container, titles),
     addRemovableGroup: (title) => createRemovableGroup(container, title),
+    addReadout: (config) => createReadoutRow(container, config),
   };
 }
 

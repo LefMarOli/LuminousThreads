@@ -1,5 +1,6 @@
 import { EnergyValue } from "./energyValue";
 import { BeatDetector } from "./beatDetector";
+import { TempoEstimator } from "./tempoEstimator";
 import type { MicAudioSource } from "./input/micAudioSource";
 import type { FileAudioSource } from "./input/fileAudioSource";
 import type { StreamAudioSource } from "./input/streamAudioSource";
@@ -7,6 +8,17 @@ import type { DisplayAudioSource } from "./input/displayAudioSource";
 import { createFFT, type P5FFT } from "./p5Sound";
 
 const FFT_SIZE = 1024;
+
+// Cooldown derived from the tempo estimate is this fraction of the beat
+// period - short enough that a same-beat subdivision within the locked
+// period can still register, long enough that a beat's decaying tail
+// doesn't re-trigger before the next one is due.
+const COOLDOWN_FRACTION = 0.5;
+// Used whenever TempoEstimator doesn't have a confident lock yet (cold
+// start, or a passage with no clear pulse) - matches BeatDetector's own
+// pre-tempo-estimator default, since there's no better answer to fall
+// back on.
+const FALLBACK_COOLDOWN_MS = 200;
 
 type BinRange = readonly [lowIdx: number, highIdx: number];
 
@@ -56,6 +68,7 @@ export class AudioAnalysis {
   #midEnergyValue: EnergyValue;
   #trebleEnergyValue: EnergyValue;
   #beatDetector: BeatDetector;
+  #tempoEstimator: TempoEstimator;
   #source:
     MicAudioSource | FileAudioSource | StreamAudioSource | DisplayAudioSource;
 
@@ -66,6 +79,10 @@ export class AudioAnalysis {
   spectrum: Float32Array;
   waveform: Float32Array;
   beat: boolean;
+  // Current tempo lock, or null while unconfident - see TempoEstimator.
+  // bpmConfidence is meaningless (0) when bpm is null.
+  bpm: number | null;
+  bpmConfidence: number;
 
   constructor(
     source:
@@ -86,6 +103,7 @@ export class AudioAnalysis {
     this.#midEnergyValue = new EnergyValue(0.1, 0.02, 0.3);
     this.#trebleEnergyValue = new EnergyValue(0.15, 0.02, 0.3);
     this.#beatDetector = new BeatDetector();
+    this.#tempoEstimator = new TempoEstimator();
 
     this.bass = 0;
     this.mid = 0;
@@ -94,6 +112,8 @@ export class AudioAnalysis {
     this.spectrum = new Float32Array();
     this.waveform = new Float32Array();
     this.beat = false;
+    this.bpm = null;
+    this.bpmConfidence = 0;
   }
 
   start(): void {
@@ -103,10 +123,6 @@ export class AudioAnalysis {
 
   setBeatSensitivity(value: number): void {
     this.#beatDetector.sensitivity = value;
-  }
-
-  setBeatCooldown(value: number): void {
-    this.#beatDetector.cooldown = value;
   }
 
   update(): void {
@@ -133,6 +149,16 @@ export class AudioAnalysis {
     // at full strength. Mid is left out - it carries mostly harmonic/vocal
     // content rather than percussive transients, so including it would
     // mostly just add noise to what the rolling average considers "normal".
-    this.beat = this.#beatDetector.update(Math.max(this.bass, this.treble));
+    const onsetSample = Math.max(this.bass, this.treble);
+
+    this.#tempoEstimator.update(onsetSample);
+    const tempo = this.#tempoEstimator.estimate;
+    this.bpm = tempo?.bpm ?? null;
+    this.bpmConfidence = tempo?.confidence ?? 0;
+    this.#beatDetector.cooldown = tempo
+      ? tempo.periodMs * COOLDOWN_FRACTION
+      : FALLBACK_COOLDOWN_MS;
+
+    this.beat = this.#beatDetector.update(onsetSample);
   }
 }
