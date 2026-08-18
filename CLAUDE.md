@@ -7,7 +7,9 @@ built with p5.js v2 + TypeScript + WebGL2, bundled with Vite.
 
 - `src/sketch.ts` — entry point. p5 instance-mode bootstrap
   (`new p5((p) => {...})`); key bindings: `f` fullscreen, `w` wireframe
-  debug overlay, `m` toggles the controls panel.
+  debug overlay, `m` toggles the controls panel, `g` toggles the audio FFT
+  debug overlay, `a` starts/stops audio-reactive mode via display/tab audio
+  capture.
 - `src/strand.ts` / `src/strandGrid.ts` — per-strand CPU-side state
   (position, mode/travel, hue). Authoritative source of vertex data;
   drawing itself doesn't live here.
@@ -19,12 +21,14 @@ built with p5.js v2 + TypeScript + WebGL2, bundled with Vite.
   - `glContext.ts` / `orthoProjection.ts` — context acquisition + projection setup
 - `src/effects/` — procedural motion (simplex noise warp, spring/stiffness
   restoring force).
-- `src/audio/` — audio-reactive pipeline (FFT/beat detection). Currently
-  **disabled** via `AUDIO_ENABLED = false` in `sketch.ts` — not wired to
-  any rendering yet, and its energy-value bounds need retuning against
-  real input. `src/audio/p5Sound.ts` holds typed wrapper functions for
-  p5.sound's untyped `FFT`/`AudioIn`/`loadSound`/`userStartAudio` API
-  (p5.sound ships zero TypeScript types).
+- `src/audio/` — audio-reactive pipeline (FFT/beat/tempo detection).
+  Enabled via `AUDIO_ENABLED = true` in `sketch.ts`; toggled on with `a`
+  (captures a shared tab/screen's audio rather than the mic). Drives
+  strand width from treble, triggers wind gusts on detected beats, and
+  feeds the beat-synced color/brightness envelope. `src/audio/p5Sound.ts`
+  holds typed wrapper functions for p5.sound's untyped
+  `FFT`/`AudioIn`/`loadSound`/`userStartAudio` API (p5.sound ships zero
+  TypeScript types).
 - `src/ui/controlsPanel.ts` — generic DOM-based labeled-slider panel,
   toggled by `m`, grouped into always-on tabs (Motion/Color/Rendering).
 - `docs/performance-tier1-webgl-proposal.md` — design/history doc for the
