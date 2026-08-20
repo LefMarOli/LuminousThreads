@@ -17,6 +17,7 @@ import {
   type ReadoutHandle,
   type RemovableGroupHandle,
 } from "./ui/controlsPanel";
+import { ActionBar } from "./ui/actionBar";
 import { FftOverlay } from "./ui/fftOverlay";
 import { userStartAudio, getAudioContext } from "./audio/p5Sound";
 import { setStiffnessCoefficient } from "./effects/stiffness";
@@ -88,6 +89,7 @@ new p5((p: p5) => {
   let gl: WebGL2RenderingContext;
   let renderer: Renderer;
   let controlsPanel: ControlsPanel;
+  let actionBar: ActionBar;
   let colorSpeedSlider: SliderHandle;
   let syncColorSpeedToNoise = false;
 
@@ -254,6 +256,13 @@ new p5((p: p5) => {
     gustFrequencySlider.setEnabled(!active);
   }
 
+  // Shared by the "f" key and ActionBar's on-screen fullscreen button.
+  function toggleFullscreen(): void {
+    const fs = p.fullscreen();
+    p.fullscreen(!fs);
+    p.windowResized();
+  }
+
   p.setup = () => {
     p.frameRate(60);
     p.createCanvas(window.innerWidth, window.innerHeight, p.WEBGL);
@@ -294,6 +303,10 @@ new p5((p: p5) => {
     );
 
     controlsPanel = new ControlsPanel();
+    actionBar = new ActionBar({
+      onToggleMenu: () => controlsPanel.toggle(),
+      onToggleFullscreen: toggleFullscreen,
+    });
 
     const motion = controlsPanel.addGroup("Motion");
     const { General, Noise, Gust } = motion.addSubTabs([
@@ -994,13 +1007,14 @@ new p5((p: p5) => {
 
   p.keyPressed = () => {
     if (p.key === "f") {
-      const fs = p.fullscreen();
-      p.fullscreen(!fs);
-      p.windowResized();
+      toggleFullscreen();
     } else if (p.key === "w") {
       renderer.toggleWireframe();
     } else if (p.key === "m") {
-      controlsPanel.toggle();
+      // Routed through ActionBar so its menu button's active state and
+      // auto-hide/pin behavior stay in sync with the panel regardless of
+      // whether it was opened/closed via this key or the on-screen button.
+      actionBar.setMenuOpen(controlsPanel.toggle());
     } else if (p.key === "g" && AUDIO_ENABLED) {
       fftOverlay?.toggle();
     } else if (p.key === "a" && AUDIO_ENABLED) {

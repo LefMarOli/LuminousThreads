@@ -364,6 +364,7 @@ function createRemovableGroup(
 export class ControlsPanel {
   #container: HTMLDivElement;
   #tabBar: HTMLDivElement;
+  #body: HTMLDivElement;
   #tabs: HTMLButtonElement[] = [];
   #sections: HTMLDivElement[] = [];
   #currentSection?: HTMLDivElement;
@@ -376,6 +377,14 @@ export class ControlsPanel {
     this.#tabBar = document.createElement("div");
     this.#tabBar.className = "controls-panel__tabs";
     this.#container.appendChild(this.#tabBar);
+
+    // Sections scroll in their own region, separate from #tabBar above -
+    // otherwise scrolling down through a tall section's content (e.g.
+    // Gust's sliders) scrolls the top-level tab row itself out of view,
+    // with no way to switch tabs without scrolling back up first.
+    this.#body = document.createElement("div");
+    this.#body.className = "controls-panel__body";
+    this.#container.appendChild(this.#body);
 
     document.body.appendChild(this.#container);
   }
@@ -406,7 +415,7 @@ export class ControlsPanel {
     });
 
     this.#tabBar.appendChild(tab);
-    this.#container.appendChild(section);
+    this.#body.appendChild(section);
     this.#tabs.push(tab);
     this.#sections.push(section);
     this.#currentSection = section;
@@ -426,8 +435,9 @@ export class ControlsPanel {
     createToggleRow(this.#currentSection, config);
   }
 
-  toggle(): void {
+  toggle(): boolean {
     this.#visible = !this.#visible;
     this.#container.classList.toggle("visible", this.#visible);
+    return this.#visible;
   }
 }
