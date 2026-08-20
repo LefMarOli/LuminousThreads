@@ -34,12 +34,7 @@ export class ActionBar {
     this.#menuButton.textContent = "☰";
     this.#menuButton.setAttribute("aria-label", "Toggle controls menu");
     this.#menuButton.addEventListener("click", () => {
-      this.#pinned = config.onToggleMenu();
-      this.#menuButton.classList.toggle(
-        "action-bar__button--active",
-        this.#pinned,
-      );
-      this.#scheduleHide();
+      this.#setPinned(config.onToggleMenu());
     });
     this.#container.appendChild(this.#menuButton);
 
@@ -67,6 +62,22 @@ export class ActionBar {
 
     // Shown once on load so first-time visitors see it exists at all,
     // before it settles into pure tap-to-reveal behavior.
+    this.#show();
+  }
+
+  // Keeps this bar's pinned/active state in sync when the panel is toggled
+  // through a path other than this bar's own button - e.g. the "m" key
+  // (see sketch.ts's p.keyPressed) - which otherwise has no way to tell this
+  // instance the panel's visibility just changed, leaving the button's
+  // active state and auto-hide behavior stale relative to what's actually
+  // open.
+  setMenuOpen(open: boolean): void {
+    this.#setPinned(open);
+  }
+
+  #setPinned(open: boolean): void {
+    this.#pinned = open;
+    this.#menuButton.classList.toggle("action-bar__button--active", open);
     this.#show();
   }
 

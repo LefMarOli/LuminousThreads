@@ -190,9 +190,10 @@ canvas {
      scrolling ancestor here, now that the top-level tab row lives outside
      it) - the same "content too tall hides the tabs" problem, one level
      down, otherwise reproduces inside e.g. Motion's Noise/Gust sliders.
-     Same translucent tone as the rest of the panel (not a flatter opaque
-     black) so it still reads as part of it while masking scrolled content
-     underneath. */
+     Left fully transparent (not given its own translucent fill) on purpose -
+     the panel's own background already covers this area, and stacking
+     another translucent layer on top of it would compound into a visibly
+     darker patch than the rest of the panel. */
   position: sticky;
   top: 0;
   z-index: 1;

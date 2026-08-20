@@ -89,6 +89,7 @@ new p5((p: p5) => {
   let gl: WebGL2RenderingContext;
   let renderer: Renderer;
   let controlsPanel: ControlsPanel;
+  let actionBar: ActionBar;
   let colorSpeedSlider: SliderHandle;
   let syncColorSpeedToNoise = false;
 
@@ -302,7 +303,7 @@ new p5((p: p5) => {
     );
 
     controlsPanel = new ControlsPanel();
-    new ActionBar({
+    actionBar = new ActionBar({
       onToggleMenu: () => controlsPanel.toggle(),
       onToggleFullscreen: toggleFullscreen,
     });
@@ -1010,7 +1011,10 @@ new p5((p: p5) => {
     } else if (p.key === "w") {
       renderer.toggleWireframe();
     } else if (p.key === "m") {
-      controlsPanel.toggle();
+      // Routed through ActionBar so its menu button's active state and
+      // auto-hide/pin behavior stay in sync with the panel regardless of
+      // whether it was opened/closed via this key or the on-screen button.
+      actionBar.setMenuOpen(controlsPanel.toggle());
     } else if (p.key === "g" && AUDIO_ENABLED) {
       fftOverlay?.toggle();
     } else if (p.key === "a" && AUDIO_ENABLED) {
