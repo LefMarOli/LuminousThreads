@@ -14,7 +14,9 @@ canvas {
 #controls-panel {
   display: none;
   position: fixed;
-  top: 16px;
+  /* Clears the action bar (top: 16px, 44px tall) plus a small gap, so the
+     panel's own tab row never sits underneath those buttons. */
+  top: 68px;
   right: 16px;
   flex-direction: column;
   gap: 12px;
@@ -26,12 +28,54 @@ canvas {
   font-family: sans-serif;
   font-size: 13px;
   z-index: 10;
-  max-height: calc(100vh - 32px);
-  overflow-y: auto;
+  max-height: calc(100vh - 84px);
 }
 
 #controls-panel.visible {
   display: flex;
+}
+
+.controls-panel__body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+#action-bar {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  gap: 8px;
+  z-index: 11;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+#action-bar.action-bar--visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.action-bar__button {
+  width: 44px;
+  height: 44px;
+  background: rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  color: #eee;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.action-bar__button--active {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.4);
 }
 
 #fft-overlay {
@@ -139,9 +183,21 @@ canvas {
 
 .controls-panel__subtabs {
   display: flex;
-  gap: 4px;
+  gap: 14px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   margin-bottom: 4px;
+  /* Sticks to the top of .controls-panel__body's own scroll area (the only
+     scrolling ancestor here, now that the top-level tab row lives outside
+     it) - the same "content too tall hides the tabs" problem, one level
+     down, otherwise reproduces inside e.g. Motion's Noise/Gust sliders.
+     Same translucent tone as the rest of the panel (not a flatter opaque
+     black) so it still reads as part of it while masking scrolled content
+     underneath. */
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: rgba(0, 0, 0, 0);
+  padding-top: 4px;
 }
 
 .controls-panel__subtab {
@@ -154,7 +210,7 @@ canvas {
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  padding: 0 0 6px;
+  padding: 0 4px 8px;
   cursor: pointer;
 }
 
@@ -207,4 +263,47 @@ canvas {
 .controls-panel__button:disabled {
   opacity: 0.4;
   cursor: default;
+}
+
+@media (max-width: 600px) {
+  #controls-panel {
+    top: auto;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    border-radius: 12px 12px 0 0;
+    max-height: 70vh;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+    box-sizing: border-box;
+  }
+
+  /* flex:1 squeezes every tab to fit, but with 4-5 top-level tabs the text
+     can't shrink below its own content width - it silently overflows the
+     sheet with no way to scroll to whatever got pushed off-screen. Letting
+     the strip scroll horizontally instead keeps every tab reachable. */
+  .controls-panel__tabs,
+  .controls-panel__subtabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .controls-panel__tab,
+  .controls-panel__subtab {
+    flex: 0 0 auto;
+  }
+
+  .controls-panel__tab {
+    font-size: 13px;
+    padding: 0 4px 12px;
+  }
+
+  .controls-panel__subtab {
+    font-size: 12px;
+    padding: 0 4px 10px;
+  }
+
+  .controls-panel__button {
+    padding: 10px 14px;
+  }
 }
